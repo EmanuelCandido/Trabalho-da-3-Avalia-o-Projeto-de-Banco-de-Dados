@@ -93,7 +93,14 @@ insert into public.configuracoes (chave, valor) values
     ('loja_nome', 'NOMA'),
     ('whatsapp_numero', '5583999999999'),
     ('faixa_promocional', '10% OFF EXTRA NO PIX'),
-    ('faixa_termina_em', '')  -- vazio: a contagem recomeça todo dia à meia-noite
+    ('faixa_termina_em', ''),  -- vazio: a contagem recomeça todo dia à meia-noite
+    ('faixa_ativa', '1'),
+    ('faixa_link', ''),
+    ('faixa_contagem', '1'),
+    ('faixa_cor_fundo', '#0b0b0c'),
+    ('faixa_cor_texto', '#f2f2f2'),
+    ('carrossel_tempo', '6'),
+    ('carrossel_automatico', '1')
 on conflict (chave) do nothing;
 
 -- ---------------------------------------------------------------------

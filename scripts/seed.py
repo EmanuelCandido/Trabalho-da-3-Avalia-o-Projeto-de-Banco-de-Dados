@@ -191,6 +191,31 @@ def montar(p, posicao):
     }
 
 
+BANNERS = [
+    {"chapeu": "Black Friday", "titulo": "Até 30% off", "subtitulo": "na coleção primavera",
+     "botao_texto": "Ver ofertas", "botao_link": "/ofertas", "cor_fundo": "#1d3a52", "tema": "claro",
+     "imagem": "/static/img/banners/banner-black-friday.webp", "imagem_celular": "/static/img/banners/banner-black-friday-m.webp"},
+    {"chapeu": "Nova coleção", "titulo": "Linho & terra", "subtitulo": "peças leves para os dias quentes",
+     "botao_texto": "Conhecer", "botao_link": "/novidades", "cor_fundo": "#b07a4f", "tema": "claro",
+     "imagem": "/static/img/banners/banner-colecao.webp", "imagem_celular": "/static/img/banners/banner-colecao-m.webp"},
+]
+
+
+def semear_banners(limpar=False):
+    """Cria os banners iniciais só se a coleção estiver vazia (não apaga o que foi feito no painel)."""
+    col = mongo.banners()
+    if limpar:
+        col.delete_many({})
+    if col.count_documents({}):
+        print("Banners: já existem, mantidos como estão.")
+        return
+    agora = datetime.now(timezone.utc)
+    for ordem, banner in enumerate(BANNERS, start=1):
+        col.insert_one({**banner, "ativo": True, "ordem": ordem, "inicio": None, "fim": None,
+                        "criado_em": agora, "atualizado_em": agora})
+    print(f"{len(BANNERS)} banners criados no MongoDB (noma.banners).")
+
+
 def main():
     mongo.init(Config.MONGO_URI, Config.MONGO_DB)
     col = mongo.produtos()
@@ -202,6 +227,7 @@ def main():
         col.update_one({"slug": doc["slug"]}, {"$set": doc}, upsert=True)
         print(f"  ok  {doc['nome']}")
     print(f"{len(PRODUTOS)} produtos no MongoDB ({Config.MONGO_DB}.produtos).")
+    semear_banners(limpar="--limpar" in sys.argv)
     try:
         redis_store.init(Config.REDIS_URL)
         redis_store.invalidar_cache()

@@ -65,16 +65,24 @@
 
   /* ------------------------------------------------ contagem regressiva da faixa */
   const faixa = $(".faixa");
-  if (faixa) {
+  if (faixa && $("[data-h]", faixa)) {
     let fim = Date.parse(faixa.dataset.termina || "");
-    if (!fim || fim < Date.now()) { const d = new Date(); d.setHours(23, 59, 59, 0); fim = d.getTime(); }
-    const partes = { h: $("[data-h]", faixa), m: $("[data-m]", faixa), s: $("[data-s]", faixa) };
+    const fimDoDia = () => { const d = new Date(); d.setHours(23, 59, 59, 0); return d.getTime(); };
+    if (!fim || fim < Date.now()) fim = fimDoDia();  // sem data (ou já passou): recomeça todo dia
+    const partes = { d: $("[data-d]", faixa), h: $("[data-h]", faixa), m: $("[data-m]", faixa), s: $("[data-s]", faixa) };
     const atualizar = () => {
-      let resto = Math.max(0, Math.floor((fim - Date.now()) / 1000));
-      const v = { h: Math.floor(resto / 3600), m: Math.floor((resto % 3600) / 60), s: resto % 60 };
+      if (fim < Date.now()) fim = fimDoDia();
+      const resto = Math.max(0, Math.floor((fim - Date.now()) / 1000));
+      const dias = Math.floor(resto / 86400);
+      partes.d.hidden = dias === 0;
+      partes.d.textContent = `${dias}d `;
+      const v = { h: Math.floor((resto % 86400) / 3600), m: Math.floor((resto % 3600) / 60), s: resto % 60 };
       for (const k in v) {
         const txt = String(v[k]).padStart(2, "0");
-        if (partes[k].textContent !== txt) { partes[k].textContent = txt; partes[k].classList.remove("tique"); void partes[k].offsetWidth; partes[k].classList.add("tique"); }
+        if (partes[k].textContent !== txt) {
+          partes[k].textContent = txt;
+          if (!reduzir) { partes[k].classList.remove("tique"); void partes[k].offsetWidth; partes[k].classList.add("tique"); }
+        }
       }
     };
     atualizar(); setInterval(atualizar, 1000);
@@ -104,34 +112,53 @@
   }
   veu?.addEventListener("click", esconderVeu);
 
-  /* ------------------------------------------------ carrossel do topo */
+  /* ------------------------------------------------ carrossel do topo (banners vindos do MongoDB) */
   const carrossel = $("[data-carrossel]");
   if (carrossel) {
     const slides = $$(".hero__slide", carrossel), pontos = $$("[data-ponto]", carrossel);
-    let atual = 0, timer;
-    const DUR = 6500;
+    let atual = 0, timer, trocando = false;
+    const DUR = Math.min(20, Math.max(3, +carrossel.dataset.tempo || 6)) * 1000;
     carrossel.style.setProperty("--duracao", DUR + "ms");
     // Banners fora da primeira tela guardam o endereço em data-*: só baixam quando forem usados.
     const carregarSlide = (slide) => {
       $$("[data-srcset]", slide).forEach((el) => { el.srcset = el.dataset.srcset; delete el.dataset.srcset; });
       $$("[data-src]", slide).forEach((el) => { el.src = el.dataset.src; delete el.dataset.src; });
+      const img = $("img", slide);
+      // Espera a foto estar pronta (no máximo 6 s) para nunca mostrar um banner vazio.
+      const pronta = img.complete && img.naturalWidth ? Promise.resolve()
+        : (img.decode ? img.decode() : new Promise((ok) => { img.onload = ok; img.onerror = ok; }));
+      return Promise.race([pronta.catch(() => {}), new Promise((ok) => setTimeout(ok, 6000))]);
     };
-    const automatico = !poucosDados;
-    const ir = (n) => {
-      slides[atual].classList.remove("ativo"); pontos[atual].classList.remove("ativo");
-      atual = (n + slides.length) % slides.length;
-      carregarSlide(slides[atual]);
-      slides[atual].classList.add("ativo"); pontos[atual].classList.add("ativo");
-      clearTimeout(timer); if (automatico) timer = setTimeout(() => ir(atual + 1), DUR);
-    };
-    // Depois que a página terminou de carregar, adianta o próximo banner em segundo plano.
-    if (automatico) addEventListener("load", () => (window.requestIdleCallback || setTimeout)(() => slides.forEach(carregarSlide)));
+    const automatico = carrossel.dataset.auto !== "0" && !poucosDados && slides.length > 1;
+    const agendar = () => { clearTimeout(timer); if (automatico) timer = setTimeout(() => ir(atual + 1), DUR); };
+    async function ir(n) {
+      const alvo = (n + slides.length) % slides.length;
+      if (alvo === atual || trocando) return;
+      trocando = true;
+      pontos[alvo]?.classList.add("carregando");
+      await carregarSlide(slides[alvo]);
+      pontos[alvo]?.classList.remove("carregando");
+      slides[atual].classList.remove("ativo"); slides[atual].setAttribute("aria-hidden", "true");
+      pontos[atual]?.classList.remove("ativo");
+      $$("a", slides[atual]).forEach((a) => a.tabIndex = -1);
+      atual = alvo;
+      slides[atual].classList.add("ativo"); slides[atual].removeAttribute("aria-hidden");
+      pontos[atual]?.classList.add("ativo");
+      $$("a", slides[atual]).forEach((a) => a.removeAttribute("tabindex"));
+      trocando = false;
+      agendar();
+    }
     pontos.forEach((p) => p.addEventListener("click", () => ir(+p.dataset.ponto)));
     let x0 = null;
     carrossel.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
     carrossel.addEventListener("touchend", (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) ir(atual + (dx < 0 ? 1 : -1)); x0 = null; });
-    if (automatico) timer = setTimeout(() => ir(1), DUR);
-    else carrossel.classList.add("parado");
+    // Pausa quando a aba está escondida (economiza bateria e dados).
+    document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(timer); else agendar(); });
+    if (automatico) {
+      // Logo depois que a página carregou, adianta o próximo banner em segundo plano.
+      addEventListener("load", () => (window.requestIdleCallback || setTimeout)(() => slides[1] && carregarSlide(slides[1])));
+      agendar();
+    } else carrossel.classList.add("parado");
   }
 
   /* ------------------------------------------------ trilho (vistos recentemente) */

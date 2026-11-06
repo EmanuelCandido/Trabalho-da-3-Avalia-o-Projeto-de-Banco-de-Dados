@@ -1,0 +1,87 @@
+/* NOMA — componentes de formulário próprios (usados pela loja e pelo painel). Ver static/js/ui.js */
+
+.ui-nativo { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ------------------------------------------------ lista suspensa */
+.ui-select { position: relative; display: inline-block; min-width: 0; width: 100%; }
+.ui-select__botao { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px;
+  border: 1px solid var(--linha-forte); border-radius: var(--raio); background: var(--superficie); color: var(--texto); font-size: 14px; text-align: left;
+  cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+.ui-select__botao:hover { border-color: var(--texto); }
+.ui-select__botao:focus-visible, .ui-select.aberto .ui-select__botao { outline: none; border-color: var(--texto); box-shadow: 0 0 0 3px rgb(0 0 0 / .07); }
+.ui-select__valor { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-select__botao .i { width: 16px; height: 16px; flex: none; color: var(--suave); transition: transform .3s var(--suavizar); }
+.ui-select.aberto .ui-select__botao .i { transform: rotate(180deg); color: var(--texto); }
+.ui-select__lista { position: absolute; z-index: 40; left: 0; top: calc(100% + 6px); min-width: 100%; max-height: 280px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+  background: var(--superficie); border-radius: 10px; box-shadow: 0 14px 40px rgb(0 0 0 / .14), 0 0 0 1px rgb(0 0 0 / .05);
+  opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top; pointer-events: none; visibility: hidden;
+  transition: opacity .18s, transform .22s var(--suavizar), visibility .22s; }
+.ui-select.para-cima .ui-select__lista { top: auto; bottom: calc(100% + 6px); transform-origin: bottom; transform: translateY(6px) scale(.98); }
+.ui-select.aberto .ui-select__lista { opacity: 1; transform: none; pointer-events: auto; visibility: visible; }
+.ui-select__lista li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: 7px; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.ui-select__lista li.foco { background: var(--fundo); }
+.ui-select__lista li[aria-selected="true"] { font-weight: 700; }
+.ui-select__lista li[aria-selected="true"]::after { content: ""; width: 7px; height: 12px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-2px); }
+.ui-select__lista li.desab { opacity: .4; cursor: not-allowed; }
+.ui-select.mudou .ui-select__valor { animation: uiMudou .35s var(--mola); }
+@keyframes uiMudou { from { opacity: 0; transform: translateY(-5px); } }
+
+/* ------------------------------------------------ seletor de cor */
+.ui-cor { position: relative; display: inline-flex; }
+.ui-cor__amostra { width: 42px; height: 40px; border-radius: 9px; border: 1px solid var(--linha-forte); background: var(--superficie); padding: 4px; cursor: pointer; transition: border-color .2s, transform .2s var(--mola); }
+.ui-cor__amostra:hover { border-color: var(--texto); }
+.ui-cor__amostra:active { transform: scale(.92); }
+.ui-cor__amostra i { display: block; width: 100%; height: 100%; border-radius: 6px; background: var(--c); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12); }
+.ui-cor__painel { position: absolute; z-index: 45; top: calc(100% + 6px); left: 0; width: 236px; padding: 12px; background: var(--superficie); border-radius: 12px;
+  box-shadow: 0 14px 40px rgb(0 0 0 / .16), 0 0 0 1px rgb(0 0 0 / .05); opacity: 0; transform: translateY(-6px) scale(.97); transform-origin: top left;
+  visibility: hidden; pointer-events: none; transition: opacity .18s, transform .22s var(--suavizar), visibility .22s; }
+.ui-cor.aberto .ui-cor__painel { opacity: 1; transform: none; visibility: visible; pointer-events: auto; }
+.ui-cor__grade { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.ui-cor__grade button { aspect-ratio: 1; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14); cursor: pointer; transition: transform .2s var(--mola); }
+.ui-cor__grade button:hover { transform: scale(1.15); }
+.ui-cor__grade button.marcada { box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14), 0 0 0 2px var(--superficie), 0 0 0 4px var(--texto); }
+.ui-cor__hex { display: flex; align-items: center; gap: 4px; margin-top: 10px; border: 1px solid var(--linha-forte); border-radius: 8px; padding: 0 10px; height: 36px; font-size: 13px; color: var(--suave); }
+.ui-cor__hex input { border: 0 !important; outline: 0; box-shadow: none !important; padding: 0 !important; min-height: 0 !important; height: 32px; width: 100%; font-family: ui-monospace, Consolas, monospace; text-transform: uppercase; background: transparent; color: var(--texto); }
+.ui-cor__hex:focus-within { border-color: var(--texto); }
+
+/* ------------------------------------------------ número com − e + */
+.ui-numero { display: flex; align-items: stretch; border: 1px solid var(--linha-forte); border-radius: var(--raio); background: var(--superficie); overflow: hidden; transition: border-color .2s, box-shadow .2s; }
+.ui-numero:focus-within { border-color: var(--texto); box-shadow: 0 0 0 3px rgb(0 0 0 / .07); }
+.ui-numero input { border: 0 !important; box-shadow: none !important; text-align: center; min-width: 0; flex: 1; -moz-appearance: textfield; appearance: textfield; outline: none; }
+.ui-numero input::-webkit-outer-spin-button, .ui-numero input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ui-numero button { width: 40px; flex: none; display: grid; place-items: center; color: var(--suave); background: var(--fundo); cursor: pointer; transition: background .2s, color .2s; }
+.ui-numero button:hover { color: var(--texto); background: #ebebef; }
+.ui-numero button:active .i { transform: scale(.8); }
+.ui-numero .i { width: 15px; height: 15px; transition: transform .15s; }
+.campo.erro .ui-numero { border-color: var(--vermelho); }
+
+/* campo que recebeu um atalho de data pisca de leve */
+.piscou { animation: uiPiscou .6s ease; }
+@keyframes uiPiscou { 0% { box-shadow: 0 0 0 3px rgb(36 99 235 / .35); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* ------------------------------------------------ controle deslizante */
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 26px; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 9px; background: linear-gradient(90deg, var(--texto) var(--pct, 50%), var(--linha) var(--pct, 50%)); }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 9px; background: var(--linha); }
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 9px; background: var(--texto); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: var(--superficie); border: 2px solid var(--texto); box-shadow: 0 2px 6px rgb(0 0 0 / .2); transition: transform .2s var(--mola); }
+input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--superficie); border: 2px solid var(--texto); }
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.2); }
+input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgb(36 99 235 / .3); }
+
+/* ------------------------------------------------ barras de rolagem, seleção de texto e autopreenchimento */
+* { scrollbar-width: thin; scrollbar-color: #c9c9cf transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c9c9cf; border-radius: 99px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #9d9da5; background-clip: padding-box; border: 3px solid transparent; }
+::selection { background: #111113; color: #fff; }
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 40px #fff inset; -webkit-text-fill-color: var(--texto); transition: background-color 9999s; }
+input::placeholder, textarea::placeholder { color: var(--apagado); opacity: 1; }
+input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+textarea { font-family: inherit; }
+
+/* o bloco com uma lista ou paleta aberta fica acima dos vizinhos (as animações de entrada criam camadas próprias) */
+.cartao:has(.ui-select.aberto, .ui-cor.aberto), .entrar:has(.ui-select.aberto, .ui-cor.aberto), .revelar:has(.ui-select.aberto, .ui-cor.aberto),
+.filtros:has(.ui-select.aberto), .modal__caixa:has(.ui-select.aberto) { position: relative; z-index: 60; }

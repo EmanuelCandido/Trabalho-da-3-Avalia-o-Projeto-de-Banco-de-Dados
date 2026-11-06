@@ -45,6 +45,7 @@ def init(uri, nome_db):
         col.create_index("destaques.oferta")
         col.create_index("destaques.queridinho")
         col.create_index("destaques.novidade")
+        _db.banners.create_index([("ativo", ASCENDING), ("ordem", ASCENDING)])
     except PyMongoError:
         # Sem rede no momento da subida: as telas mostram o erro e o índice é criado na próxima vez.
         pass
@@ -350,3 +351,79 @@ def apagar_imagem(imagem_id):
             _fs().delete(oid)
         except PyMongoError:
             pass
+
+
+# ---------------------------------------------------------------- banners do carrossel (coleção "banners")
+# Cada banner é um documento: textos, botão, imagens (computador e celular), cores, período e ordem.
+
+MAX_BANNERS = 8
+
+
+def banners():
+    return _db.banners
+
+
+def _banner_saida(doc):
+    if not doc:
+        return None
+    saida = {k: v for k, v in doc.items() if k != "_id"}
+    saida["id"] = str(doc["_id"])
+    for chave in ("inicio", "fim", "criado_em", "atualizado_em"):
+        if isinstance(saida.get(chave), datetime):
+            saida[chave] = saida[chave].isoformat()
+    return saida
+
+
+def listar_banners():
+    return [_banner_saida(d) for d in banners().find().sort([("ordem", ASCENDING), ("criado_em", ASCENDING)])]
+
+
+def banners_no_ar(agora=None):
+    """Banners ativos cujo período (início/fim) inclui o momento atual, na ordem definida no painel."""
+    agora = agora or _agora()
+    filtro = {"ativo": True,
+              "$and": [{"$or": [{"inicio": None}, {"inicio": {"$lte": agora}}]},
+                       {"$or": [{"fim": None}, {"fim": {"$gt": agora}}]}]}
+    return [_banner_saida(d) for d in banners().find(filtro).sort("ordem", ASCENDING).limit(MAX_BANNERS)]
+
+
+def banner_por_id(banner_id):
+    oid = _oid(banner_id)
+    return _banner_saida(banners().find_one({"_id": oid})) if oid else None
+
+
+def salvar_banner(dados, banner_id=None):
+    agora = _agora()
+    if banner_id:
+        banners().update_one({"_id": _oid(banner_id)}, {"$set": {**dados, "atualizado_em": agora}})
+        return banner_id
+    ultimo = banners().find_one(sort=[("ordem", DESCENDING)])
+    dados = {**dados, "ordem": (ultimo or {}).get("ordem", 0) + 1, "criado_em": agora, "atualizado_em": agora}
+    return str(banners().insert_one(dados).inserted_id)
+
+
+def excluir_banner(banner_id):
+    doc = banners().find_one_and_delete({"_id": _oid(banner_id)})
+    if doc:
+        for chave in ("imagem", "imagem_celular"):
+            if str(doc.get(chave) or "").startswith("/imagem/"):
+                apagar_imagem(doc[chave].rsplit("/", 1)[-1])
+    return doc is not None
+
+
+def alternar_banner(banner_id):
+    doc = banners().find_one_and_update(
+        {"_id": _oid(banner_id)}, [{"$set": {"ativo": {"$not": "$ativo"}, "atualizado_em": _agora()}}],
+        return_document=ReturnDocument.AFTER, projection={"ativo": 1})
+    return doc["ativo"] if doc else None
+
+
+def ordenar_banners(ids):
+    for posicao, banner_id in enumerate(ids, start=1):
+        oid = _oid(banner_id)
+        if oid:
+            banners().update_one({"_id": oid}, {"$set": {"ordem": posicao}})
+
+
+def contar_banners():
+    return banners().count_documents({}), banners().count_documents({"ativo": True})

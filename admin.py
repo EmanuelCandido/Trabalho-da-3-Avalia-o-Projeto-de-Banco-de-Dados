@@ -3,13 +3,15 @@ import io
 import json
 import re
 import secrets
+from datetime import datetime, timezone
 from time import perf_counter
 
 from flask import (Blueprint, flash, jsonify, redirect, render_template, request, session, url_for)
 from PIL import Image, UnidentifiedImageError
 
 from bancos import mongo, redis_store, supabase
-from utils import admin_obrigatorio, config_loja, ip_cliente, ler_preco
+from utils import (admin_obrigatorio, config_loja, ip_cliente, ler_data_hora, ler_preco,
+                   mostrar_data_hora)
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -312,8 +314,6 @@ def configuracoes():
         valores = {
             "loja_nome": (request.form.get("loja_nome") or "NOMA").strip()[:40],
             "whatsapp_numero": numero,
-            "faixa_promocional": (request.form.get("faixa_promocional") or "").strip()[:60],
-            "faixa_termina_em": (request.form.get("faixa_termina_em") or "").strip()[:19],
         }
         if not 12 <= len(numero) <= 13:
             erros["whatsapp_numero"] = "Use DDI + DDD + número, só dígitos (ex.: 5583999998888)."
@@ -324,3 +324,228 @@ def configuracoes():
             return redirect(url_for("admin.configuracoes"))
         return render_template("admin/configuracoes.html", c=valores, erros=erros), 400
     return render_template("admin/configuracoes.html", c=config_loja(), erros=erros)
+
+
+# ---------------------------------------------------------------- vitrine: banners do carrossel e faixa do topo
+
+COR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+LINKS_PRONTOS = [("/ofertas", "Ofertas da Black"), ("/novidades", "Novidades"), ("/roupas", "Roupas"),
+                 ("/acessorios", "Acessórios"), ("/sobre", "Sobre a NOMA"), ("/atendimento", "Atendimento")]
+
+
+def _status_banner(b, agora):
+    inicio = datetime.fromisoformat(b["inicio"]) if b.get("inicio") else None
+    fim = datetime.fromisoformat(b["fim"]) if b.get("fim") else None
+    if not b.get("ativo"):
+        return "desligado", "Desligado"
+    if inicio and inicio > agora:
+        return "agendado", "Agendado"
+    if fim and fim <= agora:
+        return "encerrado", "Encerrado"
+    return "no_ar", "No ar"
+
+
+def _salvar_foto(arquivo, largura):
+    """Converte a foto enviada para WebP no tamanho certo e grava no GridFS. Devolve a URL ou levanta ValueError."""
+    try:
+        img = Image.open(arquivo.stream)
+        img.verify()
+        arquivo.stream.seek(0)
+        img = Image.open(arquivo.stream).convert("RGB")
+    except (UnidentifiedImageError, OSError) as erro:
+        raise ValueError(f"“{arquivo.filename}” não é uma imagem válida.") from erro
+    img.thumbnail((largura, largura * 2))
+    saida = io.BytesIO()
+    img.save(saida, "WEBP", quality=78, method=4)
+    return "/imagem/" + mongo.salvar_imagem(saida.getvalue(), arquivo.filename[:80], "image/webp")
+
+
+@bp.get("/vitrine")
+@admin_obrigatorio
+def vitrine():
+    agora = datetime.now(timezone.utc)
+    lista = []
+    for b in mongo.listar_banners():
+        codigo, rotulo = _status_banner(b, agora)
+        lista.append({**b, "status": codigo, "status_rotulo": rotulo,
+                      "inicio_txt": mostrar_data_hora(b.get("inicio")), "fim_txt": mostrar_data_hora(b.get("fim"))})
+    c = config_loja()
+    c = {**c, "faixa_termina_txt": mostrar_data_hora(c.get("faixa_termina_em"))}
+    erros = dict.fromkeys((request.args.get("erro") or "").split(","), True)
+    return render_template("admin/vitrine.html", banners=lista, c=c, erros=erros, maximo=mongo.MAX_BANNERS,
+                           no_ar=sum(1 for b in lista if b["status"] == "no_ar"))
+
+
+@bp.post("/vitrine/faixa")
+@admin_obrigatorio
+def salvar_faixa():
+    f = request.form
+    erros = {}
+    texto = (f.get("faixa_promocional") or "").strip()[:70]
+    link = (f.get("faixa_link") or "").strip()[:200]
+    if link and not (link.startswith("/") or link.startswith("https://")):
+        erros["faixa_link"] = "Use um endereço da loja (ex.: /ofertas) ou um link https://"
+    try:
+        termina = ler_data_hora(f.get("faixa_termina_em"))
+    except ValueError:
+        termina, erros["faixa_termina_em"] = None, "Use o formato dd/mm/aaaa hh:mm."
+    cores = {k: f.get(k, "") for k in ("faixa_cor_fundo", "faixa_cor_texto")}
+    for k, v in cores.items():
+        if not COR_HEX.match(v):
+            erros[k] = "Cor inválida."
+    if f.get("faixa_ativa") == "on" and not texto:
+        erros["faixa_promocional"] = "Escreva o texto da faixa (ou desligue a faixa)."
+    if erros:
+        flash(" ".join(erros.values()), "erro")
+        return redirect(url_for("admin.vitrine", erro=",".join(erros)) + "#faixa")
+    supabase.salvar_configuracoes({
+        "faixa_ativa": "1" if f.get("faixa_ativa") == "on" else "0",
+        "faixa_promocional": texto, "faixa_link": link,
+        "faixa_contagem": "1" if f.get("faixa_contagem") == "on" else "0",
+        "faixa_termina_em": termina.isoformat() if termina else "", **cores,
+    })
+    redis_store.invalidar_cache()
+    flash("Faixa do topo salva no Supabase.", "ok")
+    return redirect(url_for("admin.vitrine") + "#faixa")
+
+
+@bp.post("/vitrine/carrossel")
+@admin_obrigatorio
+def salvar_carrossel():
+    try:
+        tempo = min(20, max(3, int(request.form.get("carrossel_tempo") or 6)))
+    except ValueError:
+        tempo = 6
+    supabase.salvar_configuracoes({
+        "carrossel_tempo": str(tempo),
+        "carrossel_automatico": "1" if request.form.get("carrossel_automatico") == "on" else "0"})
+    redis_store.invalidar_cache()
+    flash("Carrossel atualizado.", "ok")
+    return redirect(url_for("admin.vitrine") + "#carrossel")
+
+
+def _ler_banner(atual=None):
+    f = request.form
+    erros = {}
+    titulo = (f.get("titulo") or "").strip()[:60]
+    if len(titulo) < 2:
+        erros["titulo"] = "Escreva o título do banner."
+    botao_texto = (f.get("botao_texto") or "").strip()[:24]
+    botao_link = (f.get("botao_link") or "").strip()[:200]
+    if botao_texto and not (botao_link.startswith("/") or botao_link.startswith("https://")):
+        erros["botao_link"] = "Escolha para onde o botão leva (ex.: /ofertas)."
+    cor = f.get("cor_fundo", "#1d3a52")
+    if not COR_HEX.match(cor):
+        erros["cor_fundo"] = "Cor inválida."
+    try:
+        inicio = ler_data_hora(f.get("inicio"))
+    except ValueError:
+        inicio, erros["inicio"] = None, "Use dd/mm/aaaa hh:mm."
+    try:
+        fim = ler_data_hora(f.get("fim"))
+    except ValueError:
+        fim, erros["fim"] = None, "Use dd/mm/aaaa hh:mm."
+    if inicio and fim and fim <= inicio:
+        erros["fim"] = "O fim precisa ser depois do início."
+
+    imagens = {"imagem": (atual or {}).get("imagem"), "imagem_celular": (atual or {}).get("imagem_celular")}
+    for campo, largura in (("imagem", 1920), ("imagem_celular", 900)):
+        if f.get(f"remover_{campo}") == "1":
+            imagens[campo] = None
+        arquivo = request.files.get(campo)
+        if arquivo and arquivo.filename:
+            try:
+                imagens[campo] = _salvar_foto(arquivo, largura)
+            except ValueError as erro:
+                erros[campo] = str(erro)
+    if not imagens["imagem"] and "imagem" not in erros:
+        erros["imagem"] = "Envie a imagem para computador."
+
+    dados = {
+        "chapeu": (f.get("chapeu") or "").strip()[:40], "titulo": titulo,
+        "subtitulo": (f.get("subtitulo") or "").strip()[:80],
+        "botao_texto": botao_texto, "botao_link": botao_link if botao_texto else "",
+        "cor_fundo": cor.lower(), "tema": "escuro" if f.get("tema") == "escuro" else "claro",
+        "alinhamento": "centro" if f.get("alinhamento") == "centro" else "esquerda",
+        "inicio": inicio, "fim": fim, "ativo": f.get("ativo") == "on", **imagens,
+    }
+    return dados, erros
+
+
+def _form_banner(b, erros, editando):
+    b = {**b, "inicio_txt": b.get("inicio_txt") or mostrar_data_hora(b.get("inicio")),
+         "fim_txt": b.get("fim_txt") or mostrar_data_hora(b.get("fim"))}
+    return render_template("admin/banner.html", b=b, erros=erros, editando=editando, links=LINKS_PRONTOS)
+
+
+@bp.route("/vitrine/banners/novo", methods=["GET", "POST"])
+@admin_obrigatorio
+def novo_banner():
+    if request.method == "POST":
+        dados, erros = _ler_banner()
+        if not erros:
+            if mongo.contar_banners()[0] >= mongo.MAX_BANNERS:
+                flash(f"Limite de {mongo.MAX_BANNERS} banners. Exclua um antes de criar outro.", "erro")
+                return redirect(url_for("admin.vitrine"))
+            mongo.salvar_banner(dados)
+            redis_store.invalidar_cache()
+            flash("Banner criado e salvo no MongoDB.", "ok")
+            return redirect(url_for("admin.vitrine") + "#banners")
+        flash("Confira os campos destacados.", "erro")
+        return _form_banner({**dados, "inicio_txt": request.form.get("inicio"), "fim_txt": request.form.get("fim")},
+                            erros, False), 400
+    vazio = {"chapeu": "", "titulo": "", "subtitulo": "", "botao_texto": "Ver mais", "botao_link": "/ofertas",
+             "cor_fundo": "#1d3a52", "tema": "claro", "alinhamento": "esquerda", "ativo": True,
+             "imagem": None, "imagem_celular": None}
+    return _form_banner(vazio, {}, False)
+
+
+@bp.route("/vitrine/banners/<banner_id>/editar", methods=["GET", "POST"])
+@admin_obrigatorio
+def editar_banner(banner_id):
+    atual = mongo.banner_por_id(banner_id)
+    if not atual:
+        flash("Banner não encontrado.", "erro")
+        return redirect(url_for("admin.vitrine"))
+    if request.method == "POST":
+        dados, erros = _ler_banner(atual)
+        if not erros:
+            for campo in ("imagem", "imagem_celular"):
+                antiga = atual.get(campo) or ""
+                if antiga != dados[campo] and antiga.startswith("/imagem/"):
+                    mongo.apagar_imagem(antiga.rsplit("/", 1)[-1])
+            mongo.salvar_banner(dados, banner_id)
+            redis_store.invalidar_cache()
+            flash("Banner atualizado.", "ok")
+            return redirect(url_for("admin.vitrine") + "#banners")
+        flash("Confira os campos destacados.", "erro")
+        return _form_banner({**dados, "id": banner_id, "inicio_txt": request.form.get("inicio"),
+                             "fim_txt": request.form.get("fim")}, erros, True), 400
+    return _form_banner(atual, {}, True)
+
+
+@bp.post("/vitrine/banners/<banner_id>/excluir")
+@admin_obrigatorio
+def excluir_banner(banner_id):
+    ok = mongo.excluir_banner(banner_id)
+    redis_store.invalidar_cache()
+    return jsonify(ok=ok), (200 if ok else 404)
+
+
+@bp.post("/vitrine/banners/<banner_id>/ativo")
+@admin_obrigatorio
+def alternar_banner(banner_id):
+    ativo = mongo.alternar_banner(banner_id)
+    if ativo is None:
+        return jsonify(erro="Banner não encontrado."), 404
+    redis_store.invalidar_cache()
+    return jsonify(ativo=ativo)
+
+
+@bp.post("/vitrine/banners/ordem")
+@admin_obrigatorio
+def ordenar_banners():
+    ids = (request.get_json(silent=True) or {}).get("ids") or []
+    mongo.ordenar_banners([str(i) for i in ids][:mongo.MAX_BANNERS * 2])
+    redis_store.invalidar_cache()
+    return jsonify(ok=True)

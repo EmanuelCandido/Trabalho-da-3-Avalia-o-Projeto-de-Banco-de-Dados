@@ -5,7 +5,7 @@ Trabalho da 3ª avaliação de **Projeto de Banco de Dados**. É uma loja de rou
 | Banco | Papel no sistema |
 |---|---|
 | **Supabase** (PostgreSQL + Auth) | Login do administrador, auditoria de acessos, pedidos e itens, configurações da loja |
-| **MongoDB** | Cadastro e armazenamento dos produtos (documentos flexíveis) e das fotos enviadas (GridFS) |
+| **MongoDB** | Cadastro e armazenamento dos produtos (documentos flexíveis), banners do carrossel e fotos enviadas (GridFS) |
 | **Redis** | Produtos vistos recentemente, carrinho, cache do catálogo, ranking dos mais vistos e bloqueio de força bruta no login |
 
 ![Página inicial](docs/telas/inicio.jpg)
@@ -27,7 +27,9 @@ Trabalho da 3ª avaliação de **Projeto de Banco de Dados**. É uma loja de rou
 - Produtos: busca, ativar/desativar, excluir com confirmação e "ver documento no MongoDB".
 - Cadastro/edição: fotos por upload (vão para o GridFS) ou link, cores, tamanhos, vitrine, **atributos dinâmicos** e prévia ao vivo do card.
 - Pedidos com itens, mensagem enviada e troca de status.
-- Configurações: número do WhatsApp, nome da loja e faixa promocional.
+- **Vitrine:** banners do carrossel (até 8) com textos, botão, imagens para computador e celular (upload em WebP no GridFS), cor, posição do texto, período de exibição (início e fim), ligar/desligar e ordem arrastando; tempo de cada banner e troca automática; faixa promocional do topo com texto, link, cores, contagem regressiva e data de término — tudo com prévia ao vivo.
+- Configurações: número do WhatsApp e nome da loja.
+- Formulários sem controles nativos do navegador: listas suspensas, paleta de cor, data e hora com máscara, números com − e + e controles deslizantes próprios (`static/js/ui.js` e `static/css/ui.css`).
 
 Animações: revelação ao rolar, foto que "voa" até o carrinho, contador que pulsa, gaveta e modais com mola, botões com onda, tremida em erros, check animado no pedido, esqueletos de carregamento. Tudo respeita `prefers-reduced-motion`.
 
@@ -131,6 +133,18 @@ Cada produto pode ter campos diferentes em `atributos` (uma polo tem "Gola"; um 
 }
 ```
 
+### MongoDB — coleção `banners`
+
+```json
+{
+  "chapeu": "Black Friday", "titulo": "Até 30% off", "subtitulo": "na coleção primavera",
+  "botao_texto": "Ver ofertas", "botao_link": "/ofertas",
+  "imagem": "/imagem/6731a…", "imagem_celular": "/imagem/6731b…",
+  "cor_fundo": "#1d3a52", "tema": "claro", "alinhamento": "esquerda",
+  "inicio": null, "fim": "ISODate", "ativo": true, "ordem": 1
+}
+```
+
 ### Supabase — PostgreSQL
 
 | Objeto | Uso |
@@ -138,7 +152,7 @@ Cada produto pode ter campos diferentes em `atributos` (uma polo tem "Gola"; um 
 | `administradores` | Perfil de quem pode entrar (ligado a `auth.users`) |
 | `acessos_admin` | Auditoria de cada tentativa de login |
 | `pedidos` + `itens_pedido` | Pedido enviado ao WhatsApp e seus itens (`produto_id` aponta para o `_id` do MongoDB) |
-| `configuracoes` | Número do WhatsApp, nome da loja e faixa promocional |
+| `configuracoes` | Número do WhatsApp, nome da loja, faixa promocional (texto, link, cores, contagem e término) e tempo do carrossel |
 | `registrar_pedido(cliente, obs, itens jsonb)` | Função PL/pgSQL que grava pedido e itens numa transação e gera o código `NOMA-00001` |
 | `vw_resumo_vendas` | Pedidos, faturamento, ticket médio e pedidos do dia |
 
@@ -151,6 +165,7 @@ Todas as tabelas têm **RLS ligado e nenhuma política**, então ninguém as lê
 | `noma:vistos:{visitante}` | LIST | 30 dias | `LREM` + `LPUSH` + `LTRIM` mantêm os 12 últimos produtos abertos |
 | `noma:carrinho:{visitante}` | HASH | 7 dias | `produto|cor|tamanho` → quantidade |
 | `noma:cache:v{N}:{consulta}` | STRING | 5 min | Cache-aside das vitrines, listagens e produtos |
+| `noma:cache:v{N}:banners:no-ar` | STRING (JSON) | 60 s | Banners no ar agora (cache curto para respeitar o horário agendado) |
 | `noma:cache:versao` | STRING | — | `INCR` quando o admin salva: invalida todo o cache de uma vez |
 | `noma:ranking:views` | ZSET | — | `ZINCRBY` a cada visita, para os mais vistos |
 | `noma:login:falhas:{ip}` | STRING | 15 min | Bloqueio após 5 tentativas erradas |

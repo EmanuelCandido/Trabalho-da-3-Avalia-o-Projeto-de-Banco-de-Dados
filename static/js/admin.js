@@ -90,6 +90,7 @@
   $$("[data-excluir]").forEach((b) => b.addEventListener("click", () => {
     const tr = b.closest("tr");
     $("[data-conf-titulo]").textContent = "Excluir produto?";
+    $("[data-confirmar]").textContent = "Excluir";
     $("[data-conf-texto]").textContent = `“${tr.dataset.nome}” será apagado do MongoDB (com as fotos enviadas). Essa ação não pode ser desfeita.`;
     aoConfirmar = async () => {
       try {
@@ -121,6 +122,18 @@
       toast("Status atualizado no Supabase.");
     } catch (err) { toast(err.message, "erro"); }
   }));
+
+  /* funções usadas pela tela Vitrine (static/js/vitrine.js) */
+  window.NomaAdmin = {
+    api, toast, brl,
+    confirmar(titulo, texto, botao, acao) {
+      $("[data-conf-titulo]").textContent = titulo;
+      $("[data-conf-texto]").textContent = texto;
+      $("[data-confirmar]").textContent = botao;
+      aoConfirmar = acao;
+      abrir("confirmar");
+    },
+  };
 
   /* ------------------------------------------------ formulário de produto */
   const form = $("[data-form-produto]");

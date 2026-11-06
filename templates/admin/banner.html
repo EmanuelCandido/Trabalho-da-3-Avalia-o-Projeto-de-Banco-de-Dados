@@ -1,0 +1,125 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% macro erro(campo) %}{% if erros.get(campo) %}<small class="campo__erro">{{ icone('alerta') }} {{ erros[campo] }}</small>{% endif %}{% endmacro %}
+{% block titulo %}{{ 'Editar banner' if editando else 'Novo banner' }}{% endblock %}
+{% block cabecalho %}{{ 'Editar banner' if editando else 'Novo banner' }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{{ url_for('admin.vitrine') }}#banners">{{ icone('esquerda') }} Vitrine</a>
+
+<form class="form-banner" method="post" enctype="multipart/form-data" novalidate data-form-banner>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+
+  <div class="form-banner__campos">
+    <section class="cartao entrar" style="--i:0">
+      <h2 class="cartao__titulo">Textos</h2>
+      <label class="campo"><span>Chamada pequena <em class="suave" data-contador-de="chapeu">0/40</em></span>
+        <input name="chapeu" value="{{ b.chapeu }}" maxlength="40" placeholder="Ex.: Black Friday" data-p="chapeu"></label>
+      <label class="campo {{ 'erro' if erros.titulo }}"><span>Título * <em class="suave" data-contador-de="titulo">0/60</em></span>
+        <input name="titulo" value="{{ b.titulo }}" maxlength="60" required placeholder="Ex.: Até 30% off" data-p="titulo">{{ erro('titulo') }}</label>
+      <label class="campo"><span>Subtítulo <em class="suave" data-contador-de="subtitulo">0/80</em></span>
+        <input name="subtitulo" value="{{ b.subtitulo }}" maxlength="80" placeholder="Ex.: na coleção primavera" data-p="subtitulo"></label>
+      <div class="linha">
+        <label class="campo"><span>Texto do botão <em class="suave">(vazio = sem botão)</em></span>
+          <input name="botao_texto" value="{{ b.botao_texto }}" maxlength="24" placeholder="Ver ofertas" data-p="botao"></label>
+        <div class="campo {{ 'erro' if erros.botao_link }}"><span>O botão leva para</span>
+          {% set pronto = b.botao_link in links|map(attribute=0)|list %}
+          <select data-destino aria-label="Destino do botão">
+            {% for url, nome in links %}<option value="{{ url }}" {{ 'selected' if b.botao_link == url }}>{{ nome }} ({{ url }})</option>{% endfor %}
+            <option value="outro" {{ 'selected' if not pronto }}>Outro endereço…</option>
+          </select>
+          <input name="botao_link" value="{{ b.botao_link }}" maxlength="200" placeholder="/produto/… ou https://…" data-destino-texto {{ 'hidden' if pronto }}>
+          {{ erro('botao_link') }}
+        </div>
+      </div>
+    </section>
+
+    <section class="cartao entrar" style="--i:1">
+      <h2 class="cartao__titulo">Imagens <small>convertidas para WebP e salvas no GridFS do MongoDB</small></h2>
+      <div class="linha">
+        {% for campo, rotulo, dica in [('imagem', 'Computador *', 'Horizontal, ideal 1920 × 840. Deixe o lado do texto mais limpo.'),
+                                       ('imagem_celular', 'Celular', 'Vertical, ideal 900 × 1125. Sem ela, a loja recorta a de computador.')] %}
+        <div class="campo {{ 'erro' if erros.get(campo) }}">
+          <span>{{ rotulo }}</span>
+          <label class="soltar soltar--foto {{ 'soltar--celular' if campo == 'imagem_celular' }} {{ 'tem-foto' if b[campo] }}" data-foto="{{ campo }}">
+            <input type="file" name="{{ campo }}" accept="image/*">
+            <img src="{{ b[campo] or '' }}" alt="" data-foto-previa {{ 'hidden' if not b[campo] }}>
+            <span class="soltar__vazio">{{ icone('upload') }}<b>Arraste ou clique</b><span>{{ dica }}</span></span>
+          </label>
+          <input type="hidden" name="remover_{{ campo }}" value="0" data-remover-campo="{{ campo }}">
+          <button type="button" class="link link--perigo" data-remover-foto-banner="{{ campo }}" {{ 'hidden' if not b[campo] }}>{{ icone('lixeira') }} Remover imagem</button>
+          {{ erro(campo) }}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="cartao entrar" style="--i:2">
+      <h2 class="cartao__titulo">Aparência</h2>
+      <div class="linha">
+        <div class="campo"><span>Cor de fundo <em class="suave">(aparece enquanto a foto carrega)</em></span>
+          <div class="cor-com-nome"><input type="color" name="cor_fundo" value="{{ b.cor_fundo }}" data-p="cor"><small class="suave">Use a cor dominante da foto</small></div></div>
+        <div class="campo"><span>Cor do texto</span>
+          <div class="segmentado" role="radiogroup" aria-label="Cor do texto">
+            <label><input type="radio" name="tema" value="claro" {{ 'checked' if b.tema != 'escuro' }} data-p="tema"><span>Texto branco</span></label>
+            <label><input type="radio" name="tema" value="escuro" {{ 'checked' if b.tema == 'escuro' }} data-p="tema"><span>Texto preto</span></label>
+          </div></div>
+      </div>
+      <div class="campo"><span>Posição do texto</span>
+        <div class="segmentado" role="radiogroup" aria-label="Posição do texto">
+          <label><input type="radio" name="alinhamento" value="esquerda" {{ 'checked' if b.alinhamento != 'centro' }} data-p="alinhamento"><span>À esquerda</span></label>
+          <label><input type="radio" name="alinhamento" value="centro" {{ 'checked' if b.alinhamento == 'centro' }} data-p="alinhamento"><span>No centro</span></label>
+        </div></div>
+    </section>
+
+    <section class="cartao entrar" style="--i:3">
+      <h2 class="cartao__titulo">Quando aparece <small>horário de Brasília · vazio = sempre</small></h2>
+      <div class="linha">
+        <label class="campo {{ 'erro' if erros.inicio }}"><span>Começa em</span>
+          <input name="inicio" id="b_inicio" value="{{ b.inicio_txt or '' }}" data-data-hora placeholder="Agora">{{ erro('inicio') }}</label>
+        <label class="campo {{ 'erro' if erros.fim }}"><span>Termina em</span>
+          <input name="fim" id="b_fim" value="{{ b.fim_txt or '' }}" data-data-hora placeholder="Sem fim">{{ erro('fim') }}</label>
+      </div>
+      <div class="atalhos">
+        <span class="suave">Começo:</span>
+        <button type="button" class="chip-sug" data-atalho="agora" data-alvo="#b_inicio">Agora</button>
+        <button type="button" class="chip-sug" data-atalho="+24h" data-alvo="#b_inicio">Amanhã</button>
+        <button type="button" class="chip-sug" data-atalho="limpar" data-alvo="#b_inicio">Limpar</button>
+        <span class="suave">Fim:</span>
+        <button type="button" class="chip-sug" data-atalho="hoje" data-alvo="#b_fim">Hoje 23:59</button>
+        <button type="button" class="chip-sug" data-atalho="+3d" data-alvo="#b_fim">+3 dias</button>
+        <button type="button" class="chip-sug" data-atalho="+7d" data-alvo="#b_fim">+7 dias</button>
+        <button type="button" class="chip-sug" data-atalho="limpar" data-alvo="#b_fim">Sem fim</button>
+      </div>
+      <label class="chave-linha"><span><b>Banner ligado</b></span><span class="chave"><input type="checkbox" name="ativo" {{ 'checked' if b.ativo }}><span></span></span></label>
+    </section>
+  </div>
+
+  <aside class="form-banner__previa">
+    <section class="cartao entrar" style="--i:1">
+      <header class="cartao__cabeca"><h2>Prévia</h2>
+        <div class="segmentado segmentado--mini" role="tablist">
+          <label><input type="radio" name="_tela" value="pc" checked data-tela><span>{{ icone('grade') }} Computador</span></label>
+          <label><input type="radio" name="_tela" value="cel" data-tela><span>{{ icone('olho') }} Celular</span></label>
+        </div>
+      </header>
+      <div class="previa-banner" data-previa-banner data-tela-atual="pc">
+        <div class="previa-banner__palco">
+          <img alt="" data-pb-img>
+          <div class="previa-banner__texto">
+            <small data-pb-chapeu></small>
+            <strong data-pb-titulo></strong>
+            <span data-pb-subtitulo></span>
+            <i data-pb-botao></i>
+          </div>
+        </div>
+      </div>
+      <p class="suave pequeno">É assim que o banner aparece no topo da loja.</p>
+    </section>
+    <div class="salvar">
+      <a class="botao botao--contorno" href="{{ url_for('admin.vitrine') }}">Cancelar</a>
+      <button class="botao" type="submit">{{ icone('check') }} {{ 'Salvar banner' if editando else 'Criar banner' }}</button>
+    </div>
+  </aside>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/vitrine.js') }}?v={{ versao_estatico }}" defer></script>{% endblock %}

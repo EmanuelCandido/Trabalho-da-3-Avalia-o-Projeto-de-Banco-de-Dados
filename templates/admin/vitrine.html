@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Vitrine{% endblock %}
+{% block cabecalho %}Vitrine{% endblock %}
+{% block conteudo %}
+<p class="intro suave">O que aparece no topo da loja: a <b>faixa promocional</b> (salva no Supabase) e os <b>banners do carrossel</b> (documentos no MongoDB, com as fotos no GridFS). As mudanças aparecem na loja na hora.</p>
+
+{# ------------------------------------------------ banners #}
+<section class="cartao entrar" id="banners" style="--i:0">
+  <header class="cartao__cabeca cartao__cabeca--acoes">
+    <h2>Banners do carrossel <small>{{ banners|length }} de {{ maximo }} · {{ no_ar }} no ar agora</small></h2>
+    {% if banners|length < maximo %}
+    <a class="botao botao--mini" href="{{ url_for('admin.novo_banner') }}">{{ icone('mais') }} Novo banner</a>
+    {% else %}<span class="etiqueta">Limite atingido</span>{% endif %}
+  </header>
+  {% if banners %}
+  <p class="dica-arrastar">{{ icone('grade') }} Arraste pelos pontinhos para mudar a ordem. O primeiro banner é o que aparece ao abrir a loja.</p>
+  <ol class="banners" data-banners data-ordem-url="{{ url_for('admin.ordenar_banners') }}">
+    {% for b in banners %}
+    <li class="banner-linha entrar" style="--i: {{ loop.index0 }}" data-id="{{ b.id }}" data-nome="{{ b.titulo }}">
+      <button class="banner-linha__alca" type="button" aria-label="Arrastar para reordenar" data-alca>
+        <svg viewBox="0 0 10 16" aria-hidden="true"><circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="2" cy="14" r="1.5"/><circle cx="8" cy="14" r="1.5"/></svg>
+      </button>
+      <span class="banner-linha__pos" data-pos>{{ loop.index }}</span>
+      <div class="banner-linha__fotos">
+        <span class="banner-linha__pc" style="--fundo: {{ b.cor_fundo }}"><img src="{{ b.imagem }}" alt="" loading="lazy"></span>
+        <span class="banner-linha__cel" style="--fundo: {{ b.cor_fundo }}">{% if b.imagem_celular %}<img src="{{ b.imagem_celular }}" alt="" loading="lazy">{% else %}{{ icone('imagem') }}{% endif %}</span>
+      </div>
+      <div class="banner-linha__texto">
+        <small>{{ b.chapeu or '—' }}</small>
+        <b>{{ b.titulo }}</b>
+        <span class="suave">{% if b.botao_texto %}Botão “{{ b.botao_texto }}” → {{ b.botao_link }}{% else %}Sem botão{% endif %}</span>
+      </div>
+      <div class="banner-linha__status">
+        <span class="etiqueta etiqueta--{{ b.status }}" data-status>{{ b.status_rotulo }}</span>
+        <small class="suave">{% if b.inicio_txt or b.fim_txt %}{{ b.inicio_txt or 'agora' }} → {{ b.fim_txt or 'sem fim' }}{% else %}Sem período{% endif %}</small>
+      </div>
+      <label class="chave" title="Ligar ou desligar na loja">
+        <input type="checkbox" {{ 'checked' if b.ativo }} data-alternar-banner="{{ url_for('admin.alternar_banner', banner_id=b.id) }}"><span></span>
+      </label>
+      <div class="acoes">
+        <a class="botao-icone" href="{{ url_for('admin.editar_banner', banner_id=b.id) }}" title="Editar">{{ icone('editar') }}</a>
+        <button class="botao-icone botao-icone--perigo" type="button" title="Excluir" data-excluir-banner="{{ url_for('admin.excluir_banner', banner_id=b.id) }}">{{ icone('lixeira') }}</button>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="vazio-grande vazio-grande--sem-sombra">
+    <span>{{ icone('imagem') }}</span>
+    <h2>Nenhum banner ainda</h2>
+    <p class="suave">Sem banners, a loja abre direto nas ofertas.</p>
+    <a class="botao" href="{{ url_for('admin.novo_banner') }}">{{ icone('mais') }} Criar o primeiro banner</a>
+  </div>
+  {% endif %}
+</section>
+
+<div class="duas-colunas duas-colunas--vitrine">
+  {# ------------------------------------------------ faixa do topo #}
+  <form class="cartao entrar" id="faixa" method="post" action="{{ url_for('admin.salvar_faixa') }}" novalidate style="--i:1" data-form-faixa>
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <header class="cartao__cabeca"><h2>Faixa promocional do topo <small>Supabase · configuracoes</small></h2></header>
+
+    <div class="previa-faixa" aria-label="Prévia da faixa">
+      <div class="previa-faixa__navegador"><i></i><i></i><i></i><span>noma.com.br</span></div>
+      <div class="previa-faixa__barra" data-previa-faixa style="--faixa-fundo: {{ c.faixa_cor_fundo }}; --faixa-texto: {{ c.faixa_cor_texto }}">
+        <span data-previa-texto>{{ c.faixa_promocional or 'Texto da faixa' }}</span>
+        <b data-previa-tempo>00:00:00</b>
+      </div>
+      <div class="previa-faixa__topo"><span>NOMA</span><i></i><i></i><i></i></div>
+    </div>
+
+    <label class="chave-linha"><span><b>Mostrar a faixa na loja</b></span><span class="chave"><input type="checkbox" name="faixa_ativa" {{ 'checked' if c.faixa_ativa != '0' }} data-faixa-ativa><span></span></span></label>
+    <label class="campo {{ 'erro' if erros.faixa_promocional }}"><span>Texto <em class="suave" data-contador-de="faixa_promocional">0/70</em></span>
+      <input name="faixa_promocional" value="{{ c.faixa_promocional }}" maxlength="70" placeholder="Ex.: 10% OFF EXTRA NO PIX" data-faixa-texto></label>
+    <label class="campo {{ 'erro' if erros.faixa_link }}"><span>Link ao clicar <em class="suave">(opcional)</em></span>
+      <input name="faixa_link" id="faixa_link" value="{{ c.faixa_link }}" maxlength="200" placeholder="/ofertas ou https://…"></label>
+    <div class="atalhos">
+      {% for url, nome in [('/ofertas', 'Ofertas'), ('/novidades', 'Novidades'), ('/roupas', 'Roupas'), ('', 'Sem link')] %}
+      <button type="button" class="chip-sug" data-preencher="#faixa_link" data-valor="{{ url }}">{{ nome }}</button>
+      {% endfor %}
+    </div>
+
+    <label class="chave-linha"><span><b>Contagem regressiva</b><small class="suave bloco">Mostra horas, minutos e segundos até o fim da promoção</small></span>
+      <span class="chave"><input type="checkbox" name="faixa_contagem" {{ 'checked' if c.faixa_contagem != '0' }} data-faixa-contagem><span></span></span></label>
+    <label class="campo {{ 'erro' if erros.faixa_termina_em }}"><span>A promoção termina em</span>
+      <input name="faixa_termina_em" id="faixa_termina" value="{{ c.faixa_termina_txt }}" data-data-hora data-faixa-fim></label>
+    <div class="atalhos">
+      <button type="button" class="chip-sug" data-atalho="hoje" data-alvo="#faixa_termina">Hoje 23:59</button>
+      <button type="button" class="chip-sug" data-atalho="+6h" data-alvo="#faixa_termina">+6 horas</button>
+      <button type="button" class="chip-sug" data-atalho="+24h" data-alvo="#faixa_termina">+24 horas</button>
+      <button type="button" class="chip-sug" data-atalho="+3d" data-alvo="#faixa_termina">+3 dias</button>
+      <button type="button" class="chip-sug" data-atalho="+7d" data-alvo="#faixa_termina">+7 dias</button>
+      <button type="button" class="chip-sug" data-atalho="limpar" data-alvo="#faixa_termina">Recomeçar todo dia</button>
+    </div>
+
+    <div class="linha">
+      <div class="campo"><span>Cor de fundo</span><div class="cor-com-nome"><input type="color" name="faixa_cor_fundo" value="{{ c.faixa_cor_fundo }}" data-faixa-fundo><small class="suave">Fundo da faixa</small></div></div>
+      <div class="campo"><span>Cor do texto</span><div class="cor-com-nome"><input type="color" name="faixa_cor_texto" value="{{ c.faixa_cor_texto }}" data-faixa-cor><small class="suave">Texto e contagem</small></div></div>
+    </div>
+    <div class="salvar salvar--esq"><button class="botao" type="submit">{{ icone('check') }} Salvar faixa</button></div>
+  </form>
+
+  {# ------------------------------------------------ carrossel #}
+  <form class="cartao entrar" id="carrossel" method="post" action="{{ url_for('admin.salvar_carrossel') }}" novalidate style="--i:2">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <header class="cartao__cabeca"><h2>Carrossel <small>como os banners se revezam</small></h2></header>
+    <label class="chave-linha"><span><b>Trocar sozinho</b><small class="suave bloco">Em redes muito lentas a troca automática fica desligada para economizar dados</small></span>
+      <span class="chave"><input type="checkbox" name="carrossel_automatico" {{ 'checked' if c.carrossel_automatico != '0' }}><span></span></span></label>
+    <div class="campo">
+      <span>Tempo de cada banner: <b data-tempo-valor>{{ c.carrossel_tempo }} s</b></span>
+      <input type="range" name="carrossel_tempo" min="3" max="20" step="1" value="{{ c.carrossel_tempo }}" data-tempo aria-label="Segundos por banner">
+      <div class="regua"><span>3 s</span><span>10 s</span><span>20 s</span></div>
+    </div>
+    <div class="previa-tempo" aria-hidden="true"><i data-previa-barra style="--duracao: {{ c.carrossel_tempo }}s"></i></div>
+    <div class="salvar salvar--esq"><button class="botao" type="submit">{{ icone('check') }} Salvar carrossel</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/vitrine.js') }}?v={{ versao_estatico }}" defer></script>{% endblock %}

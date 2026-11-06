@@ -14,7 +14,8 @@ import admin
 import loja
 from bancos import mongo, redis_store, supabase
 from config import Config
-from utils import brl, config_loja, conferir_csrf, csrf_token, miniatura, parcelas, srcset
+from utils import (banner_srcset, brl, config_loja, conferir_csrf, csrf_token, miniatura, parcelas,
+                   srcset)
 
 
 def criar_app():
@@ -37,7 +38,7 @@ def criar_app():
 
     app.jinja_env.filters["brl"] = brl
     app.jinja_env.filters["parcelas"] = parcelas
-    app.jinja_env.globals.update(miniatura=miniatura, srcset=srcset)
+    app.jinja_env.globals.update(miniatura=miniatura, srcset=srcset, banner_srcset=banner_srcset)
 
     @app.template_filter("data")
     def data(valor, formato="%d/%m/%Y %H:%M"):
@@ -76,7 +77,7 @@ def criar_app():
                     qtd = 0
         return {"csrf_token": csrf_token, "qtd_carrinho": qtd, "url_atual": url_atual,
                 "loja": config_loja() if not request.path.startswith("/static") else {},
-                "ano": datetime.now().year, "versao_estatico": "11"}
+                "ano": datetime.now().year, "versao_estatico": "15"}
 
     @app.after_request
     def cabecalhos(resposta):

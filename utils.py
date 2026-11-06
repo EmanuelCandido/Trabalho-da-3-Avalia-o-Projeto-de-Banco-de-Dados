@@ -1,5 +1,7 @@
 """Funções compartilhadas: visitante, CSRF, moeda, carrinho e mensagem do WhatsApp."""
 import secrets
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from time import perf_counter
 import uuid
 from functools import wraps
@@ -12,9 +14,41 @@ from bancos import mongo, redis_store, supabase
 PADROES_LOJA = {
     "loja_nome": "NOMA",
     "whatsapp_numero": None,  # cai no WHATSAPP_NUMERO do .env
+    # faixa promocional do topo
+    "faixa_ativa": "1",
     "faixa_promocional": "10% OFF EXTRA NO PIX",
-    "faixa_termina_em": "",
+    "faixa_link": "",
+    "faixa_contagem": "1",
+    "faixa_termina_em": "",  # vazio: recomeça todo dia à meia-noite
+    "faixa_cor_fundo": "#0b0b0c",
+    "faixa_cor_texto": "#f2f2f2",
+    # carrossel de banners
+    "carrossel_tempo": "6",
+    "carrossel_automatico": "1",
 }
+FUSO = ZoneInfo("America/Sao_Paulo")
+
+
+def ler_data_hora(texto):
+    """'dd/mm/aaaa hh:mm' (horário de Brasília) -> datetime com fuso. Vazio -> None. Inválido -> ValueError."""
+    texto = (texto or "").strip()
+    if not texto:
+        return None
+    return datetime.strptime(texto, "%d/%m/%Y %H:%M").replace(tzinfo=FUSO)
+
+
+def mostrar_data_hora(valor):
+    """datetime ou texto ISO -> 'dd/mm/aaaa hh:mm' no horário de Brasília (para os campos do painel)."""
+    if not valor:
+        return ""
+    if isinstance(valor, str):
+        try:
+            valor = datetime.fromisoformat(valor)
+        except ValueError:
+            return ""
+    if valor.tzinfo is None:
+        valor = valor.replace(tzinfo=timezone.utc)
+    return valor.astimezone(FUSO).strftime("%d/%m/%Y %H:%M")
 
 
 # ---------------------------------------------------------------- sessão
@@ -103,6 +137,13 @@ def srcset(url):
     return f"{mini} 480w, {url} 900w" if mini != url else ""
 
 
+def banner_srcset(url):
+    """Banners de /static têm versão de 1280 px e de 1920 px; os enviados pelo painel têm um tamanho só."""
+    if url and url.startswith("/static/img/banners/") and url.endswith(".webp"):
+        return f"{url[:-5]}-1280.webp 1280w, {url} 1920w"
+    return ""
+
+
 # ---------------------------------------------------------------- configurações da loja
 
 _config_memoria = {"dados": None, "lida_em": 0.0, "versao": None}
@@ -131,7 +172,9 @@ def _config_loja_banco():
         dados = redis_store.lembrar("config", carregar, ttl=60)
     except Exception:
         dados = carregar()
-    final = {**PADROES_LOJA, **{k: v for k, v in (dados or {}).items() if v}}
+    # Campos que podem ficar vazios de propósito (link, data) não voltam para o padrão.
+    vazios_permitidos = {"faixa_link", "faixa_termina_em", "faixa_promocional"}
+    final = {**PADROES_LOJA, **{k: v for k, v in (dados or {}).items() if v or k in vazios_permitidos}}
     final["whatsapp_numero"] = "".join(c for c in (final.get("whatsapp_numero") or
                                                    current_app.config["WHATSAPP_NUMERO"]) if c.isdigit())
     return final

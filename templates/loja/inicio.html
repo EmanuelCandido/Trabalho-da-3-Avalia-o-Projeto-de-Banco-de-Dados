@@ -2,44 +2,43 @@
 {% from "_macros.html" import icone, card %}
 {% block classe_body %}pagina-inicio{% endblock %}
 {% block cabeca %}
-  {# Banner principal é o maior elemento da primeira tela: começa a baixar antes do CSS terminar #}
-  <link rel="preload" as="image" media="(max-width: 640px)" href="{{ url_for('static', filename='img/banners/banner-black-friday-m.webp') }}" fetchpriority="high">
-  <link rel="preload" as="image" media="(min-width: 641px)" imagesrcset="{{ url_for('static', filename='img/banners/banner-black-friday-1280.webp') }} 1280w, {{ url_for('static', filename='img/banners/banner-black-friday.webp') }} 1920w" imagesizes="100vw" fetchpriority="high">
+  {% if banners %}{% set b0 = banners[0] %}
+  {# O primeiro banner é o maior elemento da primeira tela: começa a baixar antes do CSS terminar #}
+  <link rel="preload" as="image" media="(max-width: 640px)" href="{{ b0.imagem_celular or b0.imagem }}" fetchpriority="high">
+  <link rel="preload" as="image" media="(min-width: 641px)" {% if banner_srcset(b0.imagem) %}imagesrcset="{{ banner_srcset(b0.imagem) }}" imagesizes="100vw"{% else %}href="{{ b0.imagem }}"{% endif %} fetchpriority="high">
+  {% endif %}
 {% endblock %}
 {% block conteudo %}
 
-<section class="hero" data-carrossel aria-roledescription="carrossel" aria-label="Destaques">
-  <div class="hero__slide ativo" style="--fundo: #1d3a52">
+{% if banners %}
+{# Banners vêm da coleção "banners" do MongoDB (painel > Vitrine) #}
+<section class="hero {{ 'hero--unico' if banners|length == 1 }}" data-carrossel aria-roledescription="carrossel" aria-label="Destaques"
+         data-tempo="{{ loja.carrossel_tempo }}" data-auto="{{ loja.carrossel_automatico }}">
+  {% for b in banners %}
+  {% set primeiro = loop.first %}
+  {% set prefixo = '' if primeiro else 'data-' %}
+  <div class="hero__slide hero__slide--{{ b.tema }} hero__slide--{{ b.alinhamento or 'esquerda' }} {{ 'ativo' if primeiro }}" style="--fundo: {{ b.cor_fundo }}"
+       {{ '' if primeiro else 'aria-hidden=true' }}>
     <picture>
-      <source media="(max-width: 640px)" srcset="{{ url_for('static', filename='img/banners/banner-black-friday-m.webp') }}">
-      <source srcset="{{ url_for('static', filename='img/banners/banner-black-friday-1280.webp') }} 1280w, {{ url_for('static', filename='img/banners/banner-black-friday.webp') }} 1920w" sizes="100vw">
-      <img src="{{ url_for('static', filename='img/banners/banner-black-friday-1280.webp') }}" width="1280" height="560" alt="Homem de camiseta branca em fundo azul" fetchpriority="high">
+      <source media="(max-width: 640px)" {{ prefixo }}srcset="{{ b.imagem_celular or b.imagem }}">
+      {% if banner_srcset(b.imagem) %}<source {{ prefixo }}srcset="{{ banner_srcset(b.imagem) }}" sizes="100vw">{% endif %}
+      <img {{ prefixo }}src="{{ b.imagem }}" width="1920" height="840" alt="" {{ 'fetchpriority=high' if primeiro }}>
     </picture>
     <div class="hero__texto">
-      <p class="hero__chapeu">Black Friday</p>
-      <h1 class="hero__titulo">Até 30% off</h1>
-      <p class="hero__sub">na coleção primavera</p>
-      <a class="botao botao--branco" href="{{ url_for('loja.listagem', secao='ofertas') }}">Ver ofertas {{ icone('seta') }}</a>
+      {% if b.chapeu %}<p class="hero__chapeu">{{ b.chapeu }}</p>{% endif %}
+      {% if primeiro %}<h1 class="hero__titulo">{{ b.titulo }}</h1>{% else %}<h2 class="hero__titulo">{{ b.titulo }}</h2>{% endif %}
+      {% if b.subtitulo %}<p class="hero__sub">{{ b.subtitulo }}</p>{% endif %}
+      {% if b.botao_texto %}<a class="botao {{ 'botao--branco' if b.tema == 'claro' else '' }}" href="{{ b.botao_link }}" {{ '' if primeiro else 'tabindex=-1' }}>{{ b.botao_texto }} {{ icone('seta') }}</a>{% endif %}
     </div>
   </div>
-  <div class="hero__slide" style="--fundo: #b07a4f">
-    <picture>
-      <source media="(max-width: 640px)" data-srcset="{{ url_for('static', filename='img/banners/banner-colecao-m.webp') }}">
-      <source data-srcset="{{ url_for('static', filename='img/banners/banner-colecao-1280.webp') }} 1280w, {{ url_for('static', filename='img/banners/banner-colecao.webp') }} 1920w" sizes="100vw">
-      <img data-src="{{ url_for('static', filename='img/banners/banner-colecao-1280.webp') }}" width="1280" height="560" alt="Mulher de camisa de linho bege em fundo terroso">
-    </picture>
-    <div class="hero__texto">
-      <p class="hero__chapeu">Nova coleção</p>
-      <h2 class="hero__titulo">Linho &amp; terra</h2>
-      <p class="hero__sub">peças leves para os dias quentes</p>
-      <a class="botao botao--branco" href="{{ url_for('loja.listagem', secao='novidades') }}">Conhecer {{ icone('seta') }}</a>
-    </div>
-  </div>
+  {% endfor %}
+  {% if banners|length > 1 %}
   <div class="hero__pontos" role="tablist">
-    <button type="button" class="ativo" aria-label="Slide 1" data-ponto="0"><i></i></button>
-    <button type="button" aria-label="Slide 2" data-ponto="1"><i></i></button>
+    {% for b in banners %}<button type="button" class="{{ 'ativo' if loop.first }}" aria-label="Banner {{ loop.index }}: {{ b.titulo }}" data-ponto="{{ loop.index0 }}"><i></i></button>{% endfor %}
   </div>
+  {% endif %}
 </section>
+{% endif %}
 
 <section class="secao">
   <h2 class="secao__titulo revelar">Ofertas da Black</h2>

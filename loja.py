@@ -48,7 +48,9 @@ def inicio():
         queridinhos, _ = mongo.listar(mongo.montar_filtro(destaque="queridinho"), "mais-vendidos", 3)
         return {"ofertas": ofertas, "acessorios": acessorios, "queridinhos": queridinhos}
     dados = redis_store.lembrar("vitrine:inicio", vitrine)
-    return render_template("loja/inicio.html", **dados, vistos=_vistos())
+    # Cache curto (60 s): banners agendados entram e saem do ar quase na hora certa.
+    banners = redis_store.lembrar("banners:no-ar", mongo.banners_no_ar, ttl=60)
+    return render_template("loja/inicio.html", **dados, banners=banners, vistos=_vistos())
 
 
 @bp.get("/<any(roupas, acessorios, novidades, ofertas):secao>")

@@ -13,6 +13,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap"></noscript>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/noma.css') }}?v={{ versao_estatico }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui.css') }}?v={{ versao_estatico }}">
   <script>
     /* Modo leve: rede lenta, economia de dados ou aparelho fraco -> menos animações e efeitos caros */
     (function () {
@@ -27,11 +28,16 @@
 <body class="{% block classe_body %}{% endblock %}">
   {% include "_icones.html" %}
 
-  {% if loja.faixa_promocional %}
-  <div class="faixa" data-termina="{{ loja.faixa_termina_em }}">
+  {# Faixa do topo: tudo configurável no painel > Vitrine (salvo na tabela configuracoes do Supabase) #}
+  {% if loja.faixa_ativa != '0' and loja.faixa_promocional %}
+  {% set tag = 'a' if loja.faixa_link else 'div' %}
+  <{{ tag }} class="faixa" {% if loja.faixa_link %}href="{{ loja.faixa_link }}"{% endif %} data-termina="{{ loja.faixa_termina_em }}"
+     style="--faixa-fundo: {{ loja.faixa_cor_fundo }}; --faixa-texto: {{ loja.faixa_cor_texto }}">
     <span>{{ loja.faixa_promocional }}</span>
-    <span class="faixa__tempo" aria-label="Tempo restante da promoção"><b data-h>00</b>:<b data-m>00</b>:<b data-s>00</b></span>
-  </div>
+    {% if loja.faixa_contagem != '0' %}
+    <span class="faixa__tempo" aria-label="Tempo restante da promoção"><b data-d hidden>0d</b><b data-h>00</b>:<b data-m>00</b>:<b data-s>00</b></span>
+    {% endif %}
+  </{{ tag }}>
   {% endif %}
 
   <header class="topo" id="topo">
@@ -181,6 +187,7 @@
   {% with mensagens = get_flashed_messages(with_categories=true) %}
     {% if mensagens %}<script type="application/json" id="flash">{{ mensagens|tojson }}</script>{% endif %}
   {% endwith %}
+  <script src="{{ url_for('static', filename='js/ui.js') }}?v={{ versao_estatico }}" defer></script>
   <script src="{{ url_for('static', filename='js/noma.js') }}?v={{ versao_estatico }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
