@@ -368,3 +368,24 @@ tr:hover .produto-celula img { transform: scale(1.06); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* cartões com tabela não podem alargar a página no celular */
+.duas-colunas > *, .form-produto__principal > *, .form-produto__lado > * { min-width: 0; }
+.duas-colunas > .cartao { overflow-x: auto; }
+@media (max-width: 860px) {
+  .cortar { max-width: 120px; }
+  .topo-lista { flex-direction: column; align-items: stretch; }
+  .busca-adm { max-width: none; }
+  .abas-adm { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .abas-adm a { flex: none; }
+  .tabela--produtos th:nth-child(2), .tabela--produtos td:nth-child(2) { display: none; }
+  .produto-celula { min-width: 190px; }
+  .modal__acoes { flex-direction: column-reverse; }
+}
+.pedido__corpo { overflow-x: auto; }
+@media (max-width: 860px) {
+  .busca-adm { width: 100%; }
+  .busca-adm select { max-width: 42%; min-width: 0; }
+}
+.pedidos { grid-template-columns: minmax(0, 1fr); }
+.topo-lista > * { min-width: 0; max-width: 100%; }

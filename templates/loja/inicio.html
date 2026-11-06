@@ -6,7 +6,7 @@
 <section class="hero" data-carrossel aria-roledescription="carrossel" aria-label="Destaques">
   <div class="hero__slide ativo" style="--fundo: #1d3a52">
     <picture>
-      <source media="(max-width: 700px)" srcset="{{ url_for('static', filename='img/banners/banner-black-friday-m.jpg') }}">
+      <source media="(max-width: 640px)" srcset="{{ url_for('static', filename='img/banners/banner-black-friday-m.jpg') }}">
       <img src="{{ url_for('static', filename='img/banners/banner-black-friday.jpg') }}" alt="Homem de camiseta branca em fundo azul" fetchpriority="high">
     </picture>
     <div class="hero__texto">
@@ -18,12 +18,12 @@
   </div>
   <div class="hero__slide" style="--fundo: #b07a4f">
     <picture>
-      <source media="(max-width: 700px)" srcset="{{ url_for('static', filename='img/banners/banner-colecao-m.jpg') }}">
+      <source media="(max-width: 640px)" srcset="{{ url_for('static', filename='img/banners/banner-colecao-m.jpg') }}">
       <img src="{{ url_for('static', filename='img/banners/banner-colecao.jpg') }}" alt="Mulher de camisa de linho bege em fundo terroso" loading="lazy">
     </picture>
     <div class="hero__texto">
       <p class="hero__chapeu">Nova coleção</p>
-      <h1 class="hero__titulo">Linho &amp; terra</h1>
+      <h2 class="hero__titulo">Linho &amp; terra</h2>
       <p class="hero__sub">peças leves para os dias quentes</p>
       <a class="botao botao--branco" href="{{ url_for('loja.listagem', secao='novidades') }}">Conhecer {{ icone('seta') }}</a>
     </div>

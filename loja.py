@@ -22,6 +22,13 @@ LISTAGENS = {
 FILTROS = ("genero", "tamanho", "cor", "preco", "material")
 
 
+def _inteiro(valor, padrao=0):
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return padrao
+
+
 def _vistos(ignorar=None):
     try:
         return mongo.por_ids(redis_store.vistos(visitante(), ignorar=ignorar, limite=8))
@@ -149,7 +156,7 @@ def api_adicionar():
     tamanhos = [t for t in p["tamanhos"] if t != "Único"]
     if tamanhos and tamanho not in tamanhos:
         return jsonify(erro="Escolha um tamanho.", campo="tamanho"), 400
-    quantidade = max(1, min(int(dados.get("quantidade") or 1), 20))
+    quantidade = max(1, min(_inteiro(dados.get("quantidade"), 1), 20))
     vid = visitante()
     chave = redis_store.chave_item(p["id"], cor, tamanho or ("Único" if "Único" in p["tamanhos"] else ""))
     atual = redis_store.carrinho(vid).get(chave, 0)
@@ -163,10 +170,10 @@ def api_adicionar():
 def api_quantidade():
     dados = request.get_json(silent=True) or {}
     vid = visitante()
-    chave = dados.get("chave", "")
+    chave = str(dados.get("chave") or "")
     if chave not in redis_store.carrinho(vid):
         return jsonify(erro="Item não está no carrinho."), 404
-    quantidade = max(0, min(int(dados.get("quantidade") or 0), 20))
+    quantidade = max(0, min(_inteiro(dados.get("quantidade"), 0), 20))
     p = mongo.por_id(chave.split("|")[0], completo=False)
     if p and quantidade > p["estoque"]:
         return jsonify(erro=f"Só temos {p['estoque']} unidade(s) em estoque.", **montar_carrinho(vid)), 409

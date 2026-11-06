@@ -27,9 +27,8 @@
     <div class="topo__in">
       <button class="topo__menu botao-icone" type="button" aria-label="Abrir menu" data-abrir-menu>{{ icone('menu') }}</button>
       <a class="logo" href="{{ url_for('loja.inicio') }}" aria-label="{{ loja.loja_nome }} — página inicial">NOMA</a>
-      <nav class="nav" aria-label="Principal" data-menu>
-        <button class="nav__fechar botao-icone" type="button" aria-label="Fechar menu" data-fechar-menu>{{ icone('fechar') }}</button>
-        {% set atual = request.path %}
+      {% set atual = request.path %}
+      <nav class="nav" aria-label="Principal">
         <a href="{{ url_for('loja.listagem', secao='roupas') }}" class="{{ 'ativo' if atual == '/roupas' }}">Roupas</a>
         <a href="{{ url_for('loja.listagem', secao='acessorios') }}" class="{{ 'ativo' if atual == '/acessorios' }}">Acessórios</a>
         <a href="{{ url_for('loja.listagem', secao='novidades') }}" class="{{ 'ativo' if atual == '/novidades' }}">Novidades</a>
@@ -46,6 +45,23 @@
       </div>
     </div>
   </header>
+
+  <nav class="menu-movel" aria-label="Menu" data-menu aria-hidden="true">
+    <div class="menu-movel__topo">
+      <a class="logo" href="{{ url_for('loja.inicio') }}">NOMA</a>
+      <button class="botao-icone botao-icone--suave" type="button" aria-label="Fechar menu" data-fechar-menu>{{ icone('fechar') }}</button>
+    </div>
+    {% for rotulo, url in [('Início', url_for('loja.inicio')), ('Roupas', url_for('loja.listagem', secao='roupas')),
+        ('Acessórios', url_for('loja.listagem', secao='acessorios')), ('Novidades', url_for('loja.listagem', secao='novidades')),
+        ('Ofertas da Black', url_for('loja.listagem', secao='ofertas')), ('Sobre a NOMA', url_for('loja.sobre')),
+        ('Atendimento', url_for('loja.atendimento'))] %}
+    <a class="menu-movel__link {{ 'ativo' if atual == url }}" style="--i: {{ loop.index0 }}" href="{{ url }}">{{ rotulo }} {{ icone('direita') }}</a>
+    {% endfor %}
+    <div class="menu-movel__pe">
+      <button class="botao botao--contorno" type="button" data-abrir-busca>{{ icone('busca') }} Buscar</button>
+      <a class="botao" href="{{ url_for('admin.login') }}">{{ icone('usuario') }} Área do administrador</a>
+    </div>
+  </nav>
 
   <main id="conteudo">{% block conteudo %}{% endblock %}</main>
 

@@ -26,7 +26,7 @@ def init(database_url, supabase_url="", anon_key="", service_key=""):
     _url, _anon, _service = supabase_url, anon_key, service_key
     if database_url:
         # prepare_threshold=None: compatível com o pooler do Supabase (PgBouncer).
-        _pool = ConnectionPool(database_url, min_size=1, max_size=5, open=False, timeout=15,
+        _pool = ConnectionPool(database_url, min_size=1, max_size=5, open=False, timeout=6,
                                kwargs={"row_factory": dict_row, "prepare_threshold": None,
                                        "connect_timeout": 10})
         _pool.open(wait=False)

@@ -148,6 +148,19 @@ OPINIOES = [
 ]
 
 
+PASTA_FOTOS = Path(__file__).resolve().parent.parent / "static" / "img" / "produtos"
+
+
+def fotos(nomes):
+    """Foto principal de cada nome e, se existir, a segunda foto (nome-2.jpg) logo depois."""
+    lista = []
+    for nome in nomes:
+        lista.append(IMG + nome + ".jpg")
+        if (PASTA_FOTOS / f"{nome}-2.jpg").exists():
+            lista.append(IMG + nome + "-2.jpg")
+    return lista
+
+
 def montar(p, posicao):
     agora = datetime.now(timezone.utc)
     rnd = random.Random(p["nome"])
@@ -169,7 +182,7 @@ def montar(p, posicao):
         "preco_promocional": float(p["promo"]) if p["promo"] else None, "preco_final": float(preco_final),
         "estoque": p["estoque"], "vendidos": p["vendidos"], "material": p["material"],
         "composicao": p["composicao"], "cores": p["cores"], "tamanhos": p["tamanhos"],
-        "imagens": [IMG + nome + ".jpg" for nome in p["imagens"]],
+        "imagens": fotos(p["imagens"]),
         "destaques": {k: k in p["destaques"] for k in ("oferta", "queridinho", "novidade")},
         "atributos": p["atributos"], "avaliacoes": avaliacoes, "ativo": True, "posicao": posicao,
         # As novidades ficam com data mais recente para aparecerem primeiro na ordenação.

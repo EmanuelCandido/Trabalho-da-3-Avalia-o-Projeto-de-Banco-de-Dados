@@ -80,7 +80,12 @@
 
   /* ------------------------------------------------ menu do celular */
   const nav = $("[data-menu]");
-  $("[data-abrir-menu]")?.addEventListener("click", () => { nav.classList.add("aberto"); mostrarVeu(() => nav.classList.remove("aberto")); });
+  $("[data-abrir-menu]")?.addEventListener("click", () => {
+    nav.classList.add("aberto"); nav.setAttribute("aria-hidden", "false");
+    mostrarVeu(() => { nav.classList.remove("aberto"); nav.setAttribute("aria-hidden", "true"); });
+    setTimeout(() => $("[data-fechar-menu]", nav)?.focus(), 200);
+  });
+  addEventListener("resize", () => { if (innerWidth > 860 && nav?.classList.contains("aberto")) esconderVeu(); });
   $("[data-fechar-menu]")?.addEventListener("click", () => esconderVeu());
 
   /* ------------------------------------------------ véu compartilhado (gaveta e menu) */
@@ -199,9 +204,11 @@
   let carrinho = { itens: [], total: 0, qtd: 0 };
   let totalMostrado = 0;
 
+  if (gaveta) gaveta.inert = true;  // fechada: fora do alcance do Tab
   function abrirCarrinho() {
-    gaveta.classList.add("aberta"); gaveta.setAttribute("aria-hidden", "false");
-    mostrarVeu(() => { gaveta.classList.remove("aberta"); gaveta.setAttribute("aria-hidden", "true"); });
+    gaveta.classList.add("aberta"); gaveta.setAttribute("aria-hidden", "false"); gaveta.inert = false;
+    mostrarVeu(() => { gaveta.classList.remove("aberta"); gaveta.setAttribute("aria-hidden", "true"); gaveta.inert = true; });
+    setTimeout(() => $("[data-fechar-carrinho]", gaveta)?.focus({ preventScroll: true }), 300);
     $$(".item", gaveta).forEach((el) => { el.classList.remove("entrar"); void el.offsetWidth; el.classList.add("entrar"); });
   }
   function fecharCarrinho() { esconderVeu(); }
@@ -500,6 +507,7 @@
   const dicaInicial = resultados?.innerHTML;
   let buscaTimer, foco = -1, ultimaBusca = "";
   function abrirBusca() {
+    if (nav?.classList.contains("aberto")) esconderVeu();
     busca.hidden = false; document.body.classList.add("travado");
     requestAnimationFrame(() => busca.classList.add("ativo"));
     setTimeout(() => entrada.focus(), 120);
@@ -514,7 +522,7 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "/" && !/input|textarea|select/i.test(document.activeElement.tagName)) { e.preventDefault(); abrirBusca(); }
   });
-  const marcar = (txt, q) => esc(txt).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>");
+  const marcar = (txt, q) => esc(txt).replace(new RegExp(`(${esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>");
   entrada?.addEventListener("input", () => {
     clearTimeout(buscaTimer);
     const q = entrada.value.trim();
