@@ -1,0 +1,125 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% macro erro(campo) %}{% if erros.get(campo) %}<small class="campo__erro">{{ icone('alerta') }} {{ erros[campo] }}</small>{% endif %}{% endmacro %}
+{% block titulo %}{{ 'Editar produto' if editando else 'Novo produto' }}{% endblock %}
+{% block cabecalho %}{{ 'Editar produto' if editando else 'Novo produto' }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="{{ url_for('admin.produtos') }}">{{ icone('esquerda') }} Produtos</a>
+
+<form class="form-produto" method="post" enctype="multipart/form-data" novalidate data-form-produto>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+
+  <div class="form-produto__principal">
+    <section class="cartao entrar" style="--i:0">
+      <h2 class="cartao__titulo">Informações</h2>
+      <label class="campo {{ 'erro' if erros.nome }}"><span>Nome do produto *</span>
+        <input name="nome" value="{{ p.nome }}" maxlength="120" required placeholder="Ex.: Camisa de Linho Areia" data-previa="nome">{{ erro('nome') }}</label>
+      <label class="campo"><span>Descrição</span>
+        <textarea name="descricao" rows="5" maxlength="3000" placeholder="Conte o que a peça tem de especial: tecido, caimento, ocasião…" data-contador-chars>{{ p.descricao }}</textarea>
+        <small class="campo__dica"><span data-chars>0</span>/3000</small></label>
+      <div class="linha">
+        <label class="campo {{ 'erro' if erros.categoria }}"><span>Categoria *</span>
+          <select name="categoria">{% for c in mongo.CATEGORIAS %}<option {{ 'selected' if p.categoria == c }}>{{ c }}</option>{% endfor %}</select>{{ erro('categoria') }}</label>
+        <label class="campo"><span>Gênero</span>
+          <select name="genero">{% for g in mongo.GENEROS %}<option {{ 'selected' if p.genero == g }}>{{ g }}</option>{% endfor %}</select></label>
+      </div>
+    </section>
+
+    <section class="cartao entrar" style="--i:1">
+      <h2 class="cartao__titulo">Preço e estoque</h2>
+      <div class="linha linha--3">
+        <label class="campo {{ 'erro' if erros.preco }}"><span>Preço *</span>
+          <span class="campo__prefixo"><i>R$</i><input name="preco" value="{{ ('%.2f'|format(p.preco)).replace('.', ',') if p.preco is number else p.preco }}" inputmode="decimal" placeholder="129,90" required data-previa="preco" data-moeda></span>{{ erro('preco') }}</label>
+        <label class="campo {{ 'erro' if erros.preco_promocional }}"><span>Preço promocional</span>
+          <span class="campo__prefixo"><i>R$</i><input name="preco_promocional" value="{{ ('%.2f'|format(p.preco_promocional)).replace('.', ',') if p.preco_promocional is number else (p.preco_promocional or '') }}" inputmode="decimal" placeholder="opcional" data-previa="promo" data-moeda></span>{{ erro('preco_promocional') }}
+          <small class="campo__dica" data-desconto></small></label>
+        <label class="campo {{ 'erro' if erros.estoque }}"><span>Estoque *</span>
+          <input name="estoque" type="number" min="0" step="1" value="{{ p.estoque }}" required>{{ erro('estoque') }}</label>
+      </div>
+      <div class="linha">
+        <label class="campo"><span>Material</span><input name="material" value="{{ p.material }}" maxlength="40" placeholder="Algodão, Linho, Couro…" list="materiais"></label>
+        <label class="campo"><span>Composição e cuidados</span><input name="composicao" value="{{ p.composicao }}" maxlength="300" placeholder="100% algodão. Lavar à mão."></label>
+      </div>
+      <datalist id="materiais"><option>Algodão</option><option>Linho</option><option>Viscose</option><option>Couro</option><option>Poliamida</option><option>Alfaiataria</option><option>Sarja</option><option>Acetato</option></datalist>
+    </section>
+
+    <section class="cartao entrar" style="--i:2">
+      <h2 class="cartao__titulo">Atributos extras <small>campos livres: cada produto pode ter os seus (documento flexível do MongoDB)</small></h2>
+      <div class="atributos-lista" data-atributos>
+        {% for k, v in p.atributos.items() %}
+        <div class="atributo"><input name="attr_nome" value="{{ k }}" placeholder="Campo (ex.: Gola)" maxlength="40"><input name="attr_valor" value="{{ v }}" placeholder="Valor (ex.: Polo)" maxlength="200">
+          <button class="botao-icone botao-icone--perigo" type="button" data-remover-attr aria-label="Remover atributo">{{ icone('fechar') }}</button></div>
+        {% endfor %}
+      </div>
+      <div class="sugestoes-attr">
+        <button class="botao botao--contorno botao--mini" type="button" data-add-attr>{{ icone('mais') }} Adicionar atributo</button>
+        <span class="suave">Sugestões:</span>
+        {% for s in ['Gola', 'Manga', 'Caimento', 'Comprimento', 'Bolsos', 'Proteção UV', 'Dimensões'] %}<button class="chip-sug" type="button" data-sugestao="{{ s }}">{{ s }}</button>{% endfor %}
+      </div>
+      <template data-modelo-attr><div class="atributo entrar-attr"><input name="attr_nome" placeholder="Campo (ex.: Gola)" maxlength="40"><input name="attr_valor" placeholder="Valor (ex.: Polo)" maxlength="200">
+        <button class="botao-icone botao-icone--perigo" type="button" data-remover-attr aria-label="Remover atributo">{{ icone('fechar') }}</button></div></template>
+    </section>
+  </div>
+
+  <div class="form-produto__lado">
+    <section class="cartao entrar" style="--i:1">
+      <h2 class="cartao__titulo">Fotos * <small>a primeira é a capa</small></h2>
+      <div class="fotos" data-fotos>
+        {% for img in p.imagens %}
+        <div class="foto" draggable="true"><img src="{{ img }}" alt=""><input type="hidden" name="imagens_mantidas" value="{{ img }}">
+          <button type="button" class="foto__remover" data-remover-foto aria-label="Remover foto">{{ icone('fechar') }}</button></div>
+        {% endfor %}
+      </div>
+      <label class="soltar {{ 'erro' if erros.imagens }}" data-soltar>
+        <input type="file" name="imagens_novas" accept="image/*" multiple data-arquivos>
+        {{ icone('upload') }}<b>Arraste fotos aqui</b><span>ou clique para escolher (JPG, PNG ou WEBP até 8 MB). Elas vão para o GridFS do MongoDB.</span>
+      </label>
+      {{ erro('imagens') }}
+      <label class="campo {{ 'erro' if erros.imagem_url }}"><span>…ou cole o link de uma imagem</span>
+        <input name="imagem_url" type="url" placeholder="https://…" data-url-imagem>{{ erro('imagem_url') }}</label>
+    </section>
+
+    <section class="cartao entrar" style="--i:2">
+      <h2 class="cartao__titulo">Cores</h2>
+      <div class="cores-lista" data-cores>
+        {% for c in p.cores %}
+        <div class="cor-linha"><input type="color" name="cor_hex" value="{{ c.hex }}" aria-label="Cor"><input name="cor_nome" value="{{ c.nome }}" placeholder="Nome da cor" maxlength="30">
+          <button class="botao-icone botao-icone--perigo" type="button" data-remover-cor aria-label="Remover cor">{{ icone('fechar') }}</button></div>
+        {% endfor %}
+      </div>
+      <button class="botao botao--contorno botao--mini" type="button" data-add-cor>{{ icone('mais') }} Adicionar cor</button>
+      <template data-modelo-cor><div class="cor-linha entrar-attr"><input type="color" name="cor_hex" value="#1a1a1a" aria-label="Cor"><input name="cor_nome" placeholder="Nome da cor" maxlength="30">
+        <button class="botao-icone botao-icone--perigo" type="button" data-remover-cor aria-label="Remover cor">{{ icone('fechar') }}</button></div></template>
+
+      <h2 class="cartao__titulo cartao__titulo--sub">Tamanhos</h2>
+      <div class="tamanhos-adm">
+        {% for t in mongo.TAMANHOS %}<label><input type="checkbox" name="tamanhos" value="{{ t }}" {{ 'checked' if t in p.tamanhos }}><span>{{ t }}</span></label>{% endfor %}
+      </div>
+    </section>
+
+    <section class="cartao entrar" style="--i:3">
+      <h2 class="cartao__titulo">Vitrine</h2>
+      <div class="opcoes-vitrine">
+        {% for k, rotulo in [('oferta', 'Ofertas da Black'), ('queridinho', 'Os queridinhos'), ('novidade', 'Novidades')] %}
+        <label class="chave-linha"><span>{{ rotulo }}</span><span class="chave"><input type="checkbox" name="destaques" value="{{ k }}" {{ 'checked' if p.destaques.get(k) }}><span></span></span></label>
+        {% endfor %}
+        <label class="chave-linha"><span><b>Visível na loja</b></span><span class="chave"><input type="checkbox" name="ativo" {{ 'checked' if p.ativo }}><span></span></span></label>
+      </div>
+    </section>
+
+    <section class="cartao previa-card entrar" style="--i:4" aria-label="Prévia do card na loja">
+      <h2 class="cartao__titulo">Prévia na loja</h2>
+      <div class="previa">
+        <div class="previa__foto"><img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="" data-previa-img></div>
+        <b data-previa-nome>{{ p.nome or 'Nome do produto' }}</b>
+        <p><s data-previa-de></s> <strong data-previa-por>R$ 0,00</strong></p>
+      </div>
+    </section>
+
+    <div class="salvar">
+      <a class="botao botao--contorno" href="{{ url_for('admin.produtos') }}">Cancelar</a>
+      <button class="botao" type="submit">{{ icone('check') }} {{ 'Salvar alterações' if editando else 'Cadastrar produto' }}</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

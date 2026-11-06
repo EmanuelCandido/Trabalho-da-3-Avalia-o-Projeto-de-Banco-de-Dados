@@ -1,0 +1,160 @@
+{% from "_macros.html" import icone %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block titulo %}{{ loja.loja_nome }} — roupas e acessórios essenciais{% endblock %}</title>
+  <meta name="description" content="NOMA: menos excessos, mais possibilidades. Roupas e acessórios para combinar com a vida que acontece.">
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/noma.css') }}?v={{ versao_estatico }}">
+</head>
+<body class="{% block classe_body %}{% endblock %}">
+  {% include "_icones.html" %}
+
+  {% if loja.faixa_promocional %}
+  <div class="faixa" data-termina="{{ loja.faixa_termina_em }}">
+    <span>{{ loja.faixa_promocional }}</span>
+    <span class="faixa__tempo" aria-label="Tempo restante da promoção"><b data-h>00</b>:<b data-m>00</b>:<b data-s>00</b></span>
+  </div>
+  {% endif %}
+
+  <header class="topo" id="topo">
+    <div class="topo__in">
+      <button class="topo__menu botao-icone" type="button" aria-label="Abrir menu" data-abrir-menu>{{ icone('menu') }}</button>
+      <a class="logo" href="{{ url_for('loja.inicio') }}" aria-label="{{ loja.loja_nome }} — página inicial">NOMA</a>
+      <nav class="nav" aria-label="Principal" data-menu>
+        <button class="nav__fechar botao-icone" type="button" aria-label="Fechar menu" data-fechar-menu>{{ icone('fechar') }}</button>
+        {% set atual = request.path %}
+        <a href="{{ url_for('loja.listagem', secao='roupas') }}" class="{{ 'ativo' if atual == '/roupas' }}">Roupas</a>
+        <a href="{{ url_for('loja.listagem', secao='acessorios') }}" class="{{ 'ativo' if atual == '/acessorios' }}">Acessórios</a>
+        <a href="{{ url_for('loja.listagem', secao='novidades') }}" class="{{ 'ativo' if atual == '/novidades' }}">Novidades</a>
+        <a href="{{ url_for('loja.sobre') }}" class="{{ 'ativo' if atual == '/sobre' }}">Sobre a NOMA</a>
+        <a href="{{ url_for('loja.atendimento') }}" class="{{ 'ativo' if atual == '/atendimento' }}">Atendimento</a>
+      </nav>
+      <div class="topo__acoes">
+        <button class="botao-icone" type="button" aria-label="Buscar" data-abrir-busca>{{ icone('busca') }}</button>
+        <a class="botao-icone" href="{{ url_for('admin.login') }}" aria-label="Área do administrador" title="Área do administrador">{{ icone('usuario') }}</a>
+        <button class="carrinho-btn" type="button" data-abrir-carrinho aria-label="Abrir carrinho">
+          {{ icone('sacola') }}<span class="carrinho-btn__txt">Carrinho</span>
+          <span class="contador {{ 'tem' if qtd_carrinho }}" data-contador>{{ qtd_carrinho }}</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo">{% block conteudo %}{% endblock %}</main>
+
+  <footer class="rodape">
+    <div class="rodape__in">
+      <a class="rodape__logo" href="{{ url_for('loja.inicio') }}">NOMA</a>
+      <div class="rodape__colunas">
+        <div><h4>Sobre a NOMA</h4>
+          <a href="{{ url_for('loja.sobre') }}">Sobre a NOMA</a><a href="{{ url_for('loja.listagem', secao='roupas') }}">Catálogo</a>
+          <a href="{{ url_for('loja.listagem', secao='novidades') }}">Novidades</a><a href="{{ url_for('loja.listagem', secao='acessorios') }}">Acessórios</a>
+          <a href="{{ url_for('loja.atendimento') }}">Atendimento</a><a href="{{ url_for('loja.guia') }}">Guia de tamanhos</a></div>
+        <div><h4>Políticas</h4>
+          <a href="{{ url_for('loja.atendimento') }}#privacidade">Privacidade</a><a href="{{ url_for('loja.atendimento') }}#termos">Termos de uso</a>
+          <a href="{{ url_for('loja.atendimento') }}#entregas">Entregas e frete</a></div>
+        <div><h4>Trocas e devoluções</h4>
+          <a href="{{ url_for('loja.atendimento') }}#trocas">Trocas e devoluções</a><a href="{{ url_for('loja.atendimento') }}#trocas">Prazo para solicitar</a>
+          <a href="{{ url_for('loja.atendimento') }}#trocas">Condições</a><a href="{{ url_for('loja.atendimento') }}#trocas">Como solicitar</a></div>
+        <div><h4>Ajuda e suporte</h4><a href="{{ url_for('loja.atendimento') }}#perguntas">Perguntas frequentes</a></div>
+      </div>
+      <div class="rodape__redes">
+        <a href="#" aria-label="Instagram">{{ icone('instagram') }}</a><a href="#" aria-label="Facebook">{{ icone('facebook') }}</a>
+        <a href="#" aria-label="TikTok">{{ icone('tiktok') }}</a><a href="#" aria-label="YouTube">{{ icone('youtube') }}</a>
+      </div>
+      <div class="rodape__base">
+        <p>© {{ ano }} NOMA<br>Rua das Tramas, 128 · Vila Aurora<br>São Paulo · SP · CEP 00000-000</p>
+        <ul class="pagamentos" aria-label="Formas de pagamento">
+          <li>Pix</li><li>Visa</li><li>Master</li><li>Elo</li><li>Amex</li><li>Hiper</li><li>Boleto</li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  {# ------------------------------------------------ gaveta do carrinho #}
+  <div class="veu" data-veu hidden></div>
+  <aside class="gaveta" data-gaveta aria-label="Seu carrinho" aria-hidden="true">
+    <header class="gaveta__topo">
+      <h2>Seu carrinho</h2>
+      <button class="botao-icone botao-icone--suave" type="button" data-fechar-carrinho aria-label="Fechar carrinho">{{ icone('fechar') }}</button>
+    </header>
+    <div class="gaveta__itens" data-itens></div>
+    <div class="gaveta__vazio" data-vazio hidden>
+      <div class="gaveta__vazio-icone">{{ icone('sacola') }}</div>
+      <h3>Seu carrinho está vazio</h3>
+      <p>Que tal começar pelos queridinhos da NOMA?</p>
+      <a class="botao" href="{{ url_for('loja.listagem', secao='roupas') }}">Explorar a loja</a>
+    </div>
+    <footer class="gaveta__rodape" data-rodape>
+      <p class="gaveta__economia" data-economia hidden></p>
+      <div class="gaveta__total"><span>Total</span><strong data-total>R$ 0,00</strong></div>
+      <button class="botao botao--largo" type="button" data-finalizar>Finalizar compra</button>
+      <button class="botao botao--contorno botao--largo" type="button" data-fechar-carrinho>Continuar comprando</button>
+    </footer>
+  </aside>
+
+  {# ------------------------------------------------ finalizar pedido #}
+  <div class="modal" data-modal="finalizar" role="dialog" aria-modal="true" aria-labelledby="fin-titulo" hidden>
+    <div class="modal__caixa modal__caixa--largo">
+      <button class="modal__fechar botao-icone botao-icone--suave" type="button" data-fechar-modal aria-label="Fechar">{{ icone('fechar') }}</button>
+      <div class="fin" data-fin>
+        <div class="fin__form">
+          <h2 id="fin-titulo">Finalizar pedido</h2>
+          <p class="suave">Seu pedido é registrado e você conclui a compra com a gente pelo WhatsApp.</p>
+          <ul class="fin__resumo" data-fin-itens></ul>
+          <div class="fin__total"><span>Total</span><strong data-fin-total></strong></div>
+          <label class="campo"><span>Seu nome <em>(opcional)</em></span>
+            <input type="text" name="nome" maxlength="80" autocomplete="name" placeholder="Como podemos te chamar?" data-fin-nome></label>
+          <label class="campo"><span>Observação <em>(opcional)</em></span>
+            <textarea name="observacao" maxlength="300" rows="2" placeholder="Ex.: presente, retirar na loja…" data-fin-obs></textarea></label>
+          <p class="campo__erro" data-fin-erro hidden></p>
+          <button class="botao botao--whats botao--largo" type="button" data-enviar-pedido>
+            {{ icone('whatsapp') }}<span>Enviar pedido pelo WhatsApp</span>
+          </button>
+        </div>
+        <div class="fin__previa" aria-label="Prévia da mensagem">
+          <p class="fin__previa-rotulo">Prévia da mensagem</p>
+          <div class="whats">
+            <div class="whats__topo"><span class="whats__avatar">N</span><div><b>{{ loja.loja_nome }}</b><small>online</small></div></div>
+            <div class="whats__conversa"><div class="whats__balao" data-fin-previa></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="sucesso" data-sucesso hidden>
+        <svg class="sucesso__check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="m15 27 7.5 7.5L38 19"/></svg>
+        <h2>Pedido <span data-codigo></span> registrado!</h2>
+        <p>Abrindo o WhatsApp com a sua mensagem…</p>
+        <a class="link" href="#" data-link-whats>Se não abrir sozinho, clique aqui {{ icone('externo') }}</a>
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------ busca #}
+  <div class="busca" data-busca hidden>
+    <div class="busca__caixa">
+      <form class="busca__form" action="{{ url_for('loja.busca') }}" role="search">
+        {{ icone('busca') }}
+        <input type="search" name="q" placeholder="Buscar camisetas, linho, bolsa…" autocomplete="off" data-busca-input aria-label="Buscar produtos">
+        <button class="botao-icone botao-icone--suave" type="button" data-fechar-busca aria-label="Fechar busca">{{ icone('fechar') }}</button>
+      </form>
+      <div class="busca__resultados" data-busca-resultados>
+        <p class="busca__dica">Mais buscados: <a href="{{ url_for('loja.busca', q='linho') }}">linho</a> · <a href="{{ url_for('loja.busca', q='camiseta') }}">camiseta</a> · <a href="{{ url_for('loja.busca', q='couro') }}">couro</a> · <a href="{{ url_for('loja.busca', q='kit') }}">kits</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" data-toasts aria-live="polite"></div>
+  {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% if mensagens %}<script type="application/json" id="flash">{{ mensagens|tojson }}</script>{% endif %}
+  {% endwith %}
+  <script src="{{ url_for('static', filename='js/noma.js') }}?v={{ versao_estatico }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

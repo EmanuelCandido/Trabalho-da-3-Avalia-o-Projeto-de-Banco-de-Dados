@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Briefing de Telas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1d1d1f; --muted: #5f6368;
+    --border: #e3e3df; --accent: #1f7a5a; --accent-soft: #e4f3ec;
+    --extra: #8a5a00; --extra-soft: #fbf0d9; --code: #f1f1ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141414; --surface: #1d1d1d; --text: #ececec; --muted: #a3a3a3;
+      --border: #2e2e2e; --accent: #5cc79d; --accent-soft: #17342a;
+      --extra: #e7b55a; --extra-soft: #3a2d12; --code: #262626;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141414; --surface: #1d1d1d; --text: #ececec; --muted: #a3a3a3;
+    --border: #2e2e2e; --accent: #5cc79d; --accent-soft: #17342a;
+    --extra: #e7b55a; --extra-soft: #3a2d12; --code: #262626;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: Inter, system-ui, sans-serif; line-height: 1.55; font-size: 15px; }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  h2 { font-size: 20px; margin: 44px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 0 0 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px; }
+  .card ul { margin: 6px 0 0; padding-left: 20px; }
+  .card li { margin: 3px 0; }
+  .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 8px; border-radius: 999px; }
+  .req { background: var(--accent-soft); color: var(--accent); }
+  .ext { background: var(--extra-soft); color: var(--extra); }
+  .db { font-size: 11px; color: var(--muted); border: 1px solid var(--border); padding: 1px 7px; border-radius: 999px; }
+  .num { color: var(--muted); font-weight: 500; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; }
+  .flow span.step { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 14px; }
+  .flow span.arrow { color: var(--muted); }
+  code { background: var(--code); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .tablewrap { overflow-x: auto; }
+  .note { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; color: var(--muted); margin: 10px 0; }
+  @media print {
+    @page { size: A4; margin: 14mm 12mm; }
+    body { background: #fff; font-size: 12.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    main { padding: 0; max-width: none; }
+    .card, .keep { break-inside: avoid; }
+    h2 { break-after: avoid; margin-top: 26px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Briefing de telas — E-commerce / Catálogo</h1>
+  <p class="lead">Lista de telas e funcionalidades para o design. O backend (Supabase, MongoDB e Redis) fica comigo; aqui está tudo o que precisa de interface. <span class="tag req">Obrigatório</span> é exigido pelo professor; <span class="tag ext">Extra</span> é opcional, se der tempo.</p>
+
+  <div class="card">
+    <h3>O que o vídeo de entrega precisa mostrar</h3>
+    <p style="margin:0;color:var(--muted)">Esse é o caminho que precisa estar bonito e funcionando. Priorize as telas dele.</p>
+    <div class="flow">
+      <span class="step">Login do admin</span><span class="arrow">→</span>
+      <span class="step">Cadastrar produto</span><span class="arrow">→</span>
+      <span class="step">Produto aparece no catálogo</span><span class="arrow">→</span>
+      <span class="step">Carrinho</span><span class="arrow">→</span>
+      <span class="step">Comprar → WhatsApp</span>
+    </div>
+  </div>
+
+  <h2>Área do cliente (pública)</h2>
+
+  <div class="card">
+    <h3><span class="num">1.</span> Catálogo / Página inicial <span class="tag req">Obrigatório</span> <span class="db">MongoDB</span></h3>
+    <ul>
+      <li>Cabeçalho com logo/nome da loja e ícone do carrinho com contador de itens.</li>
+      <li>Grade de cards de produto: imagem, nome, preço e botão “Adicionar ao carrinho”.</li>
+      <li>Clicar no card abre o detalhe do produto.</li>
+      <li>Estados: carregando, nenhum produto cadastrado e erro ao carregar.</li>
+      <li><span class="tag ext">Extra</span> Busca por nome, filtro por categoria e ordenação (menor/maior preço).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">2.</span> Vistos recentemente <span class="tag req">Obrigatório</span> <span class="db">Redis</span></h3>
+    <ul>
+      <li>Faixa horizontal (carrossel) com os últimos produtos que o cliente abriu, no máximo uns 5 a 8.</li>
+      <li>Fica na página inicial e/ou embaixo do detalhe do produto.</li>
+      <li>Card menor que o do catálogo: imagem, nome e preço.</li>
+      <li>Se o cliente ainda não viu nada, a seção some ou mostra uma mensagem curta.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">3.</span> Detalhe do produto <span class="tag req">Obrigatório</span> <span class="db">MongoDB</span></h3>
+    <ul>
+      <li>Imagem grande (<span class="tag ext">Extra</span> galeria com várias fotos).</li>
+      <li>Nome, preço, descrição e categoria.</li>
+      <li><strong>Atributos variáveis:</strong> cada produto pode ter campos diferentes (ex.: camiseta tem tamanho e cor; fone tem bateria e conexão). Pense num bloco de “Especificações” em lista de chave → valor, que aceite qualquer quantidade de itens.</li>
+      <li>Seletor de quantidade (− 1 +) e botão “Adicionar ao carrinho”.</li>
+      <li>Aviso de “Esgotado” quando não houver estoque, com o botão desabilitado.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">4.</span> Carrinho <span class="tag req">Obrigatório</span></h3>
+    <ul>
+      <li>Pode ser uma página ou uma gaveta lateral (drawer) que abre pelo ícone do cabeçalho.</li>
+      <li>Cada item: miniatura, nome, preço unitário, controle de quantidade (− / +), subtotal e botão remover.</li>
+      <li>Rodapé com o <strong>valor total</strong> sempre visível.</li>
+      <li>Botões “Continuar comprando” e <strong>“Comprar pelo WhatsApp”</strong> (botão principal, de preferência verde com o ícone do WhatsApp).</li>
+      <li>Estado de carrinho vazio com um botão para voltar ao catálogo.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">5.</span> Finalizar pedido (WhatsApp) <span class="tag req">Obrigatório</span></h3>
+    <ul>
+      <li>Ao clicar em “Comprar”, o site abre o WhatsApp com a mensagem pronta, por exemplo: <code>Olá, gostaria de pedir: 1x Produto A, 2x Produto B. Total: R$ 89,90</code></li>
+      <li>Sugestão: um modal de confirmação antes de abrir, com o resumo do pedido e a prévia da mensagem.</li>
+      <li><span class="tag ext">Extra</span> Campos “Seu nome” e “Observação” no modal, para entrarem na mensagem.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">6.</span> Avisos rápidos (toasts) <span class="tag req">Obrigatório</span></h3>
+    <ul>
+      <li>“Produto adicionado ao carrinho”, “Produto removido”, “Produto salvo”, mensagens de erro etc.</li>
+      <li>Um componente só, reaproveitado no site todo, com versões de sucesso e de erro.</li>
+    </ul>
+  </div>
+
+  <h2>Área administrativa (restrita)</h2>
+
+  <div class="card">
+    <h3><span class="num">7.</span> Login do administrador <span class="tag req">Obrigatório</span> <span class="db">Supabase</span></h3>
+    <ul>
+      <li>Campos e-mail e senha, botão “Entrar”, com o botão mostrando carregamento enquanto valida.</li>
+      <li>Mensagem de erro para credenciais inválidas.</li>
+      <li>Visual separado da loja, mais sóbrio, deixando claro que é área restrita.</li>
+      <li><span class="tag ext">Extra</span> Mostrar/ocultar senha e “Esqueci minha senha”.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">8.</span> Estrutura do painel <span class="tag req">Obrigatório</span></h3>
+    <ul>
+      <li>Menu lateral (ou superior) com: Produtos, Novo produto, Ver loja e Sair.</li>
+      <li>Nome/e-mail do admin logado no topo.</li>
+      <li>No celular, o menu vira um botão hambúrguer.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">9.</span> Lista de produtos (admin) <span class="tag req">Obrigatório</span> <span class="db">MongoDB</span></h3>
+    <ul>
+      <li>Tabela com miniatura, nome, categoria, preço, estoque, status (ativo/inativo) e ações (editar e excluir).</li>
+      <li>Botão de destaque “+ Novo produto”.</li>
+      <li>Modal de confirmação ao excluir (“Tem certeza que deseja excluir X?”).</li>
+      <li>Estado vazio: “Nenhum produto cadastrado ainda”.</li>
+      <li><span class="tag ext">Extra</span> Busca e paginação.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">10.</span> Cadastrar / editar produto <span class="tag req">Obrigatório</span> <span class="db">MongoDB</span></h3>
+    <ul>
+      <li>A mesma tela serve para criar e editar; na edição, os campos já vêm preenchidos.</li>
+      <li>Campos fixos: nome, descrição (texto longo), preço, categoria, estoque, imagem e “ativo” (liga/desliga).</li>
+      <li>Imagem: upload ou URL, com <strong>pré-visualização</strong> da foto.</li>
+      <li><strong>Atributos extras dinâmicos:</strong> botão “+ Adicionar atributo” que cria uma linha com <em>nome do campo</em> e <em>valor</em>, cada uma com botão de remover. É a parte que mostra o MongoDB, então vale capricho.</li>
+      <li>Validação nos campos: obrigatório, preço inválido etc., com a mensagem embaixo de cada campo.</li>
+      <li>Botões “Salvar” e “Cancelar”, mais o aviso de sucesso depois de salvar.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">11.</span> Dashboard inicial <span class="tag ext">Extra</span> <span class="db">Redis / Supabase</span></h3>
+    <ul>
+      <li>Cartões de resumo: total de produtos, produtos ativos, produtos sem estoque.</li>
+      <li>“Produtos mais vistos” (ranking vindo do Redis).</li>
+      <li>“Pedidos enviados ao WhatsApp” (histórico simples).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">12.</span> Configurações da loja <span class="tag ext">Extra</span> <span class="db">Supabase</span></h3>
+    <ul>
+      <li>Nome da loja, número de WhatsApp que recebe os pedidos e logo.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="num">13.</span> Gerenciar categorias <span class="tag ext">Extra</span></h3>
+    <ul>
+      <li>Lista simples com adicionar, renomear e excluir categoria.</li>
+    </ul>
+  </div>
+
+  <section class="keep">
+  <h2>Dados de um produto</h2>
+  <p class="lead" style="margin-bottom:12px">Use esses nomes de campo no design para casar direto com o backend.</p>
+  <div class="card tablewrap">
+    <table>
+      <thead><tr><th>Campo</th><th>Tipo</th><th>Exemplo</th></tr></thead>
+      <tbody>
+        <tr><td><code>nome</code></td><td>texto</td><td>Camiseta Básica Preta</td></tr>
+        <tr><td><code>descricao</code></td><td>texto longo</td><td>100% algodão, corte reto…</td></tr>
+        <tr><td><code>preco</code></td><td>número (R$)</td><td>49,90</td></tr>
+        <tr><td><code>categoria</code></td><td>texto</td><td>Roupas</td></tr>
+        <tr><td><code>imagem</code></td><td>URL / arquivo</td><td>foto do produto</td></tr>
+        <tr><td><code>estoque</code></td><td>inteiro</td><td>12</td></tr>
+        <tr><td><code>ativo</code></td><td>sim/não</td><td>sim</td></tr>
+        <tr><td><code>atributos</code></td><td>lista chave → valor (variável)</td><td>Tamanho: M · Cor: Preto</td></tr>
+      </tbody>
+    </table>
+  </div>
+  </section>
+
+  <h2>Orientações gerais de design</h2>
+  <div class="card">
+    <ul>
+      <li><strong>Mobile primeiro na loja:</strong> a compra termina no WhatsApp, então a maioria vai usar pelo celular. O admin pode ser pensado mais para desktop.</li>
+      <li><strong>Identidade:</strong> definir nome/tema da loja, logo, paleta de cores e fontes.</li>
+      <li><strong>Componentes reaproveitáveis:</strong> botão (primário, secundário, perigo), card de produto, campo de formulário, modal, toast, badge de status, spinner.</li>
+      <li><strong>Estados de toda tela:</strong> carregando, vazio, erro e sucesso.</li>
+      <li><strong>Preço no padrão brasileiro:</strong> <code>R$ 1.299,90</code>.</li>
+    </ul>
+    <p class="note">A combinar entre nós: em que formato o design chega (Figma só com o visual, ou já em HTML/CSS para eu ligar no backend) e qual será o tema da loja.</p>
+  </div>
+</main>
+</body>
+</html>

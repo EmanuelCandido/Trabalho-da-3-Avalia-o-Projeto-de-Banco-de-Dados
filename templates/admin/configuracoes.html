@@ -1,0 +1,21 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Configurações{% endblock %}
+{% block cabecalho %}Configurações{% endblock %}
+{% block conteudo %}
+<form class="cartao form-config entrar" method="post" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <h2 class="cartao__titulo">Loja <small>salvo na tabela <code>configuracoes</code> do Supabase</small></h2>
+  <label class="campo"><span>Nome da loja</span><input name="loja_nome" value="{{ c.loja_nome }}" maxlength="40"></label>
+  <label class="campo {{ 'erro' if erros.whatsapp_numero }}"><span>WhatsApp que recebe os pedidos *</span>
+    <span class="campo__prefixo">{{ icone('whatsapp') }}<input name="whatsapp_numero" value="{{ c.whatsapp_numero }}" inputmode="numeric" placeholder="5583999998888" required></span>
+    {% if erros.whatsapp_numero %}<small class="campo__erro">{{ icone('alerta') }} {{ erros.whatsapp_numero }}</small>
+    {% else %}<small class="campo__dica">DDI + DDD + número, só dígitos. O botão “Comprar” abre <code>wa.me/{{ c.whatsapp_numero }}</code>.</small>{% endif %}</label>
+  <div class="linha">
+    <label class="campo"><span>Faixa promocional (topo do site)</span><input name="faixa_promocional" value="{{ c.faixa_promocional }}" maxlength="60" placeholder="Deixe vazio para esconder"></label>
+    <label class="campo"><span>Promoção termina em</span><input type="datetime-local" name="faixa_termina_em" value="{{ c.faixa_termina_em }}">
+      <small class="campo__dica">Vazio: a contagem recomeça todo dia à meia-noite.</small></label>
+  </div>
+  <div class="salvar salvar--esq"><button class="botao" type="submit">{{ icone('check') }} Salvar configurações</button></div>
+</form>
+{% endblock %}

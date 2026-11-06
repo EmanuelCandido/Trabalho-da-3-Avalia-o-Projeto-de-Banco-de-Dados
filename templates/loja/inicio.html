@@ -1,0 +1,67 @@
+{% extends "loja/base.html" %}
+{% from "_macros.html" import icone, card %}
+{% block classe_body %}pagina-inicio{% endblock %}
+{% block conteudo %}
+
+<section class="hero" data-carrossel aria-roledescription="carrossel" aria-label="Destaques">
+  <div class="hero__slide ativo" style="--fundo: #1d3a52">
+    <picture>
+      <source media="(max-width: 700px)" srcset="{{ url_for('static', filename='img/banners/banner-black-friday-m.jpg') }}">
+      <img src="{{ url_for('static', filename='img/banners/banner-black-friday.jpg') }}" alt="Homem de camiseta branca em fundo azul" fetchpriority="high">
+    </picture>
+    <div class="hero__texto">
+      <p class="hero__chapeu">Black Friday</p>
+      <h1 class="hero__titulo">Até 30% off</h1>
+      <p class="hero__sub">na coleção primavera</p>
+      <a class="botao botao--branco" href="{{ url_for('loja.listagem', secao='ofertas') }}">Ver ofertas {{ icone('seta') }}</a>
+    </div>
+  </div>
+  <div class="hero__slide" style="--fundo: #b07a4f">
+    <picture>
+      <source media="(max-width: 700px)" srcset="{{ url_for('static', filename='img/banners/banner-colecao-m.jpg') }}">
+      <img src="{{ url_for('static', filename='img/banners/banner-colecao.jpg') }}" alt="Mulher de camisa de linho bege em fundo terroso" loading="lazy">
+    </picture>
+    <div class="hero__texto">
+      <p class="hero__chapeu">Nova coleção</p>
+      <h1 class="hero__titulo">Linho &amp; terra</h1>
+      <p class="hero__sub">peças leves para os dias quentes</p>
+      <a class="botao botao--branco" href="{{ url_for('loja.listagem', secao='novidades') }}">Conhecer {{ icone('seta') }}</a>
+    </div>
+  </div>
+  <div class="hero__pontos" role="tablist">
+    <button type="button" class="ativo" aria-label="Slide 1" data-ponto="0"><i></i></button>
+    <button type="button" aria-label="Slide 2" data-ponto="1"><i></i></button>
+  </div>
+</section>
+
+<section class="secao">
+  <h2 class="secao__titulo revelar">Ofertas da Black</h2>
+  <div class="grade">
+    {% for p in ofertas %}{{ card(p, loop.index0) }}{% endfor %}
+  </div>
+  <div class="secao__acao revelar"><a class="botao" href="{{ url_for('loja.listagem', secao='ofertas') }}">Ver mais</a></div>
+</section>
+
+<section class="secao">
+  <h2 class="secao__titulo revelar">Veja nossos acessórios</h2>
+  <div class="grade grade--3">
+    {% for p in acessorios %}{{ card(p, loop.index0) }}{% endfor %}
+  </div>
+</section>
+
+<section class="secao">
+  <h2 class="secao__titulo revelar">Os queridinhos</h2>
+  <div class="grade grade--queridinhos">
+    <aside class="manifesto revelar">
+      <span class="manifesto__icone">{{ icone('camiseta') }}</span>
+      <h3>Menos excessos.<br><span>Mais possibilidades.</span></h3>
+      <p>Roupas e acessórios para combinar com a vida que acontece.</p>
+      <p class="manifesto__pe">Na dúvida sobre o caimento?<br>Encontre as medidas para escolher do seu jeito.</p>
+      <a class="link" href="{{ url_for('loja.guia') }}">Explore o guia de tamanhos {{ icone('direita') }}</a>
+    </aside>
+    {% for p in queridinhos %}{{ card(p, loop.index0 + 1) }}{% endfor %}
+  </div>
+</section>
+
+{% include "loja/_vistos.html" %}
+{% endblock %}

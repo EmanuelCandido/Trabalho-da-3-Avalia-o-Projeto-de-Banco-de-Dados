@@ -1,0 +1,78 @@
+{% from "_macros.html" import icone %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Entrar — Painel NOMA</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ versao_estatico }}">
+</head>
+<body class="login-pagina">
+  {% include "_icones.html" %}
+  <div class="login">
+    <section class="login__foto" aria-hidden="true">
+      <img src="{{ url_for('static', filename='img/admin-login.jpg') }}" alt="">
+      <div class="login__frase">
+        <span class="login__logo">NOMA</span>
+        <p>Menos excessos.<br>Mais possibilidades.</p>
+      </div>
+    </section>
+
+    <section class="login__lado">
+      <a class="login__voltar" href="{{ url_for('loja.inicio') }}">{{ icone('esquerda') }} Voltar para a loja</a>
+      <form class="login__form {{ 'tremer' if erro }}" method="post" novalidate data-login>
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <span class="login__cadeado">{{ icone('cadeado') }}</span>
+        <h1>Área restrita</h1>
+        <p class="suave">Entre com a sua conta de administrador para gerenciar o catálogo.</p>
+
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+          {% for tipo, msg in mensagens %}<p class="aviso aviso--{{ tipo }}">{{ icone('check' if tipo == 'ok' else 'alerta') }} {{ msg }}</p>{% endfor %}
+        {% endwith %}
+        {% if erro %}
+        <p class="aviso aviso--erro" role="alert">{{ icone('alerta') }} {{ erro }}
+          {% if restantes is not none and restantes > 0 %}<small>Restam {{ restantes }} tentativa{{ 's' if restantes > 1 }} antes do bloqueio.</small>{% endif %}</p>
+        {% endif %}
+
+        <label class="campo">
+          <span>E-mail</span>
+          <span class="campo__caixa">{{ icone('email') }}<input type="email" name="email" value="{{ email }}" autocomplete="username" required autofocus placeholder="admin@noma.com"></span>
+        </label>
+        <label class="campo">
+          <span>Senha</span>
+          <span class="campo__caixa">{{ icone('cadeado') }}<input type="password" name="senha" autocomplete="current-password" required placeholder="••••••••" data-senha>
+            <button type="button" class="campo__olho" aria-label="Mostrar senha" data-olho>{{ icone('olho') }}</button></span>
+        </label>
+        <button class="botao botao--largo" type="submit" {{ 'disabled' if bloqueio }}>Entrar no painel</button>
+
+        <p class="login__selo">
+          {{ icone('supabase') }}
+          {% if modo == 'supabase' %}Autenticação pelo <b>Supabase Auth</b>{% else %}Autenticação no <b>PostgreSQL</b> (modo local){% endif %}
+          · proteção contra força bruta no <b>Redis</b>
+        </p>
+      </form>
+    </section>
+  </div>
+  <script>
+    (() => {
+      const f = document.querySelector("[data-login]");
+      const olho = document.querySelector("[data-olho]"), senha = document.querySelector("[data-senha]");
+      olho.addEventListener("click", () => {
+        const ver = senha.type === "password";
+        senha.type = ver ? "text" : "password";
+        olho.innerHTML = `<svg class="i" aria-hidden="true"><use href="#i-${ver ? "olho-off" : "olho"}"/></svg>`;
+        olho.setAttribute("aria-label", ver ? "Ocultar senha" : "Mostrar senha");
+      });
+      f.addEventListener("submit", (e) => {
+        const vazio = [...f.querySelectorAll("input[required]")].find((i) => !i.value.trim());
+        if (vazio) { e.preventDefault(); f.classList.remove("tremer"); void f.offsetWidth; f.classList.add("tremer"); vazio.focus(); return; }
+        f.querySelector('button[type="submit"]').classList.add("carregando");
+      });
+    })();
+  </script>
+</body>
+</html>

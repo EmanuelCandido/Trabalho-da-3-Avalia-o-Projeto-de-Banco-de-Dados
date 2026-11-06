@@ -1,0 +1,32 @@
+{% extends "loja/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Atendimento — NOMA{% endblock %}
+{% block conteudo %}
+<div class="pagina institucional">
+  <header class="lista-cabeca">
+    <div class="revelar"><h1 class="lista-cabeca__titulo">Atendimento</h1><p class="suave">Estamos por aqui de segunda a sábado, das 9h às 18h.</p></div>
+  </header>
+  <div class="contatos">
+    <a class="contato revelar" href="https://wa.me/{{ loja.whatsapp_numero }}?text={{ 'Olá, NOMA! Preciso de ajuda.'|urlencode }}" target="_blank" rel="noopener">
+      {{ icone('whatsapp') }}<div><h3>WhatsApp</h3><p>Resposta em poucos minutos</p></div>{{ icone('seta') }}</a>
+    <a class="contato revelar" style="--atraso:80ms" href="mailto:ola@noma.example">
+      {{ icone('email') }}<div><h3>E-mail</h3><p>ola@noma.example</p></div>{{ icone('seta') }}</a>
+    <a class="contato revelar" style="--atraso:160ms" href="{{ url_for('loja.guia') }}">
+      {{ icone('regua') }}<div><h3>Guia de tamanhos</h3><p>Encontre o caimento ideal</p></div>{{ icone('seta') }}</a>
+  </div>
+
+  <h2 class="secao__titulo secao__titulo--esq revelar" id="perguntas">Perguntas frequentes</h2>
+  <div class="sanfonas sanfonas--faq">
+    <details class="sanfona" id="pedido"><summary>Como funciona a compra? {{ icone('baixo', 'sanfona__seta') }}</summary>
+      <div class="sanfona__corpo"><p>Monte seu carrinho e clique em <b>Finalizar compra</b>. O pedido é registrado e abrimos o WhatsApp com a mensagem pronta para você combinar pagamento e entrega com a gente.</p></div></details>
+    <details class="sanfona" id="entregas"><summary>Entregas e frete {{ icone('baixo', 'sanfona__seta') }}</summary>
+      <div class="sanfona__corpo"><p>Enviamos para todo o Brasil. O frete é grátis acima de R$ 299. O prazo é informado no WhatsApp conforme o seu CEP.</p></div></details>
+    <details class="sanfona" id="trocas"><summary>Trocas e devoluções {{ icone('baixo', 'sanfona__seta') }}</summary>
+      <div class="sanfona__corpo"><p>Você tem até 30 dias para solicitar a troca, com a peça sem uso e com etiqueta. A primeira troca é grátis. Basta chamar a gente no WhatsApp com o código do pedido.</p></div></details>
+    <details class="sanfona" id="privacidade"><summary>Privacidade {{ icone('baixo', 'sanfona__seta') }}</summary>
+      <div class="sanfona__corpo"><p>Guardamos só o necessário para registrar o seu pedido (itens, nome opcional e observação). Não vendemos nem compartilhamos dados.</p></div></details>
+    <details class="sanfona" id="termos"><summary>Termos de uso {{ icone('baixo', 'sanfona__seta') }}</summary>
+      <div class="sanfona__corpo"><p>Este site é um projeto acadêmico de demonstração. Preços, produtos e promoções são fictícios.</p></div></details>
+  </div>
+</div>
+{% endblock %}

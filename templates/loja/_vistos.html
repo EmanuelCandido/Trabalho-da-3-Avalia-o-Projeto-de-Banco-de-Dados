@@ -1,0 +1,16 @@
+{% from "_macros.html" import icone, card %}
+{% if vistos %}
+<section class="secao vistos" data-vistos>
+  <div class="secao__cabeca">
+    <h2 class="secao__titulo revelar">Vistos recentemente</h2>
+    <button class="link link--suave" type="button" data-limpar-vistos title="Lista guardada no Redis">Limpar histórico</button>
+  </div>
+  <div class="trilho" data-trilho>
+    <button class="trilho__seta trilho__seta--esq" type="button" aria-label="Anteriores" data-trilho-ant>{{ icone('esquerda') }}</button>
+    <div class="trilho__faixa" data-trilho-faixa>
+      {% for p in vistos %}{{ card(p, loop.index0, compacto=true) }}{% endfor %}
+    </div>
+    <button class="trilho__seta trilho__seta--dir" type="button" aria-label="Próximos" data-trilho-prox>{{ icone('direita') }}</button>
+  </div>
+</section>
+{% endif %}

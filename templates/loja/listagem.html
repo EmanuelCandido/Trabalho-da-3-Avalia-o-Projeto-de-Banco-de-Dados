@@ -1,0 +1,90 @@
+{% extends "loja/base.html" %}
+{% from "_macros.html" import icone, card %}
+{% block titulo %}{{ info.titulo }} — NOMA{% endblock %}
+{% block conteudo %}
+<div class="pagina" data-pagina-lista>
+  <header class="lista-cabeca">
+    <div class="revelar">
+      <h1 class="lista-cabeca__titulo">{{ info.titulo }}</h1>
+      <p class="suave">{{ info.subtitulo }}</p>
+    </div>
+    <aside class="lista-cabeca__ajuda revelar">
+      <p><b>Precisa de uma mão?</b><br><a class="link" href="{{ url_for('loja.atendimento') }}">Fale com a NOMA {{ icone('direita') }}</a></p>
+      <p><b>Encontre seu tamanho.</b><br><a class="link" href="{{ url_for('loja.guia') }}">Consulte nosso guia {{ icone('direita') }}</a></p>
+    </aside>
+  </header>
+
+  <div id="lista" data-lista>
+    <div class="lista-sub">
+      <h2>{{ info.rotulo }} <small data-total>{{ total }} {{ 'produto' if total == 1 else 'produtos' }}</small></h2>
+    </div>
+
+    <div class="filtros" data-filtros>
+      <div class="filtros__grupo">
+        {% set rotulos = {'genero': 'Gênero', 'tamanho': 'Tamanho', 'cor': 'Cor', 'preco': 'Preço', 'material': 'Material'} %}
+        {% for chave in ['genero', 'tamanho', 'cor', 'preco', 'material'] %}
+          {% if chave == 'genero' %}{% set valores = opcoes.generos %}
+          {% elif chave == 'tamanho' %}{% set valores = opcoes.tamanhos %}
+          {% elif chave == 'cor' %}{% set valores = opcoes.cores %}
+          {% elif chave == 'preco' %}{% set valores = faixas.keys()|list %}
+          {% else %}{% set valores = opcoes.materiais %}{% endif %}
+          {% if valores %}
+          <div class="filtro {{ 'filtro--ativo' if escolhidos.get(chave) }}" data-filtro>
+            <button class="filtro__botao" type="button" aria-expanded="false" data-filtro-botao>
+              {{ rotulos[chave] }}{% if escolhidos.get(chave) %}<span class="filtro__ponto"></span>{% endif %} {{ icone('baixo') }}
+            </button>
+            <div class="filtro__menu {{ 'filtro__menu--chips' if chave == 'tamanho' }}" role="menu">
+              {% for v in valores %}
+                {% set valor = v.nome if chave == 'cor' else v %}
+                <a role="menuitemradio" aria-checked="{{ 'true' if escolhidos.get(chave) == valor else 'false' }}"
+                   class="{{ 'marcado' if escolhidos.get(chave) == valor }}" href="{{ url_atual(**{chave: valor}) }}" data-navegar>
+                  {% if chave == 'cor' %}<span class="bolinha" style="--cor: {{ v.hex }}"></span>{% endif %}
+                  {{ faixas[valor] if chave == 'preco' else valor }}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <label class="ordenar">
+        <span>Ordenar por</span>
+        <span class="ordenar__caixa">
+          <select data-ordenar aria-label="Ordenar por">
+            {% for k, rotulo in ordens.items() %}
+            <option value="{{ url_atual(ordem=k) }}" {{ 'selected' if ordem == k }}>{{ rotulo }}</option>
+            {% endfor %}
+          </select>{{ icone('baixo') }}
+        </span>
+      </label>
+    </div>
+
+    {% if escolhidos or q %}
+    <div class="chips-ativos">
+      {% for chave, valor in escolhidos.items() %}
+        <a class="chip" href="{{ url_atual(**{chave: None}) }}" data-navegar>{{ faixas[valor] if chave == 'preco' else valor }} {{ icone('fechar') }}</a>
+      {% endfor %}
+      <a class="link link--suave" href="{{ request.path }}{{ '?q=' ~ q if q }}" data-navegar>Limpar filtros</a>
+    </div>
+    {% endif %}
+
+    {% if produtos %}
+    <div class="grade" data-grade>
+      {% for p in produtos %}{{ card(p, loop.index0) }}{% endfor %}
+    </div>
+    {% if tem_mais %}
+    <div class="secao__acao">
+      <button class="botao" type="button" data-ver-mais data-pagina="{{ pagina }}" data-url="{{ url_atual() }}">Ver mais</button>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="vazio revelar">
+      <div class="vazio__icone">{{ icone('busca') }}</div>
+      <h3>Nada por aqui com esses filtros</h3>
+      <p class="suave">Tente tirar algum filtro ou buscar por outro termo.</p>
+      <a class="botao botao--contorno" href="{{ request.path }}" data-navegar>Limpar filtros</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

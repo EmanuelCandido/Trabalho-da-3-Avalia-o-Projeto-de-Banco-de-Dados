@@ -1,0 +1,80 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Dashboard{% endblock %}
+{% block cabecalho %}Dashboard{% endblock %}
+{% block conteudo %}
+<section class="bancos">
+  {% set nomes = {'supabase': ('Supabase', 'PostgreSQL + Auth', 'supabase'), 'mongo': ('MongoDB', 'Produtos e imagens', 'folha-mongo'), 'redis': ('Redis', 'Cache, carrinho e vistos', 'redis')} %}
+  {% for chave in ['supabase', 'mongo', 'redis'] %}
+  {% set s = status[chave] %}
+  <article class="banco banco--{{ chave }} {{ 'banco--off' if not s.ok }} entrar" style="--i: {{ loop.index0 }}">
+    <span class="banco__icone">{{ icone(nomes[chave][2]) }}</span>
+    <div><h3>{{ nomes[chave][0] }}</h3><p>{{ nomes[chave][1] }}</p></div>
+    <span class="banco__status">{% if s.ok %}<i class="pulso"></i>{{ s.ms }} ms{% else %}fora do ar{% endif %}</span>
+  </article>
+  {% endfor %}
+</section>
+{% if modo == 'local' %}
+<p class="aviso aviso--info">{{ icone('alerta') }} Autenticação em modo local (PostgreSQL + pgcrypto). Preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> no <code>.env</code> para usar o Supabase Auth.</p>
+{% endif %}
+
+<section class="numeros-adm">
+  <article class="kpi entrar" style="--i:0"><span>{{ icone('caixa') }} Produtos</span><strong data-contar="{{ resumo.total or 0 }}">0</strong><small>{{ resumo.ativos or 0 }} ativos · {{ resumo.sem_estoque or 0 }} sem estoque</small></article>
+  <article class="kpi entrar" style="--i:1"><span>{{ icone('pedido') }} Pedidos</span><strong data-contar="{{ vendas.pedidos or 0 }}">0</strong><small>{{ vendas.pedidos_hoje or 0 }} hoje · {{ vendas.itens_vendidos or 0 }} itens</small></article>
+  <article class="kpi entrar" style="--i:2"><span>{{ icone('grafico') }} Faturamento</span><strong data-contar="{{ vendas.faturamento or 0 }}" data-moeda>R$ 0,00</strong><small>ticket médio {{ (vendas.ticket_medio or 0)|brl }}</small></article>
+  <article class="kpi entrar" style="--i:3"><span>{{ icone('raio') }} Cache Redis</span><strong data-contar="{{ cache.taxa or 0 }}" data-sufixo="%">0%</strong><small>{{ cache.hits or 0 }} acertos · {{ cache.misses or 0 }} faltas · v{{ cache.versao or 0 }}</small></article>
+</section>
+
+<div class="duas-colunas">
+  <section class="cartao entrar" style="--i:4">
+    <header class="cartao__cabeca"><h2>Mais vistos <small>ranking no Redis (ZSET)</small></h2></header>
+    {% if mais_vistos %}
+    <ol class="ranking">
+      {% set topo = mais_vistos[0].views %}
+      {% for p in mais_vistos %}
+      <li>
+        <img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="">
+        <div><a href="{{ url_for('loja.produto', slug=p.slug) }}" target="_blank" rel="noopener">{{ p.nome }}</a>
+          <span class="barrinha"><i style="--pct: {{ (p.views / topo * 100)|round }}%"></i></span></div>
+        <b>{{ p.views }}</b>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}<p class="vazio-mini">Abra alguns produtos na loja para o ranking aparecer.</p>{% endif %}
+  </section>
+
+  <section class="cartao entrar" style="--i:5">
+    <header class="cartao__cabeca"><h2>Últimos pedidos <small>Supabase</small></h2><a class="link" href="{{ url_for('admin.pedidos') }}">Ver todos {{ icone('direita') }}</a></header>
+    {% if pedidos %}
+    <ul class="lista-pedidos">
+      {% for p in pedidos %}
+      <li><div><b>{{ p.codigo }}</b><small>{{ p.cliente_nome or 'Cliente sem nome' }} · {{ p.criado_em|data }}</small></div>
+        <span class="etiqueta etiqueta--{{ p.status }}">{{ status_pedido[p.status] }}</span><b>{{ p.total|brl }}</b></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vazio-mini">Nenhum pedido ainda. Faça uma compra de teste na loja.</p>{% endif %}
+  </section>
+
+  <section class="cartao entrar" style="--i:6">
+    <header class="cartao__cabeca"><h2>Comandos recentes no Redis <small>deste servidor</small></h2></header>
+    {% if eventos %}
+    <table class="tabela tabela--mini">
+      <thead><tr><th>Comando</th><th>Chave</th><th>Resultado</th><th>ms</th></tr></thead>
+      <tbody>{% for e in eventos %}<tr><td><code>{{ e.comando }}</code></td><td class="cortar" title="{{ e.chave }}">{{ e.chave }}</td><td><span class="etiqueta {{ 'etiqueta--ok' if e.resultado == 'HIT' else ('etiqueta--miss' if e.resultado == 'MISS' else '') }}">{{ e.resultado }}</span></td><td>{{ e.ms }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% else %}<p class="vazio-mini">Navegue pela loja para ver os comandos.</p>{% endif %}
+  </section>
+
+  <section class="cartao entrar" style="--i:7">
+    <header class="cartao__cabeca"><h2>Acessos ao painel <small>auditoria no Supabase</small></h2></header>
+    {% if acessos %}
+    <ul class="lista-pedidos">
+      {% for a in acessos %}
+      <li><div><b>{{ a.email }}</b><small>{{ a.criado_em|data }} · IP {{ a.ip }}</small></div>
+        <span class="etiqueta {{ 'etiqueta--ok' if a.sucesso else 'etiqueta--erro' }}">{{ 'entrou' if a.sucesso else 'recusado' }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vazio-mini">Sem registros.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

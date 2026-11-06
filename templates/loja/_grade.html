@@ -1,0 +1,2 @@
+{% from "_macros.html" import card %}
+{% for p in produtos %}{{ card(p, loop.index0) }}{% endfor %}

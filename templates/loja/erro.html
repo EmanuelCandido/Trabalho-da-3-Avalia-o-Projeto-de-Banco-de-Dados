@@ -1,0 +1,11 @@
+{% extends "loja/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}{{ titulo }} — NOMA{% endblock %}
+{% block conteudo %}
+<div class="pagina vazio vazio--pagina">
+  <p class="vazio__codigo">{{ codigo }}</p>
+  <h1>{{ titulo }}</h1>
+  <p class="suave">{{ texto }}</p>
+  <a class="botao" href="{{ url_for('loja.inicio') }}">Voltar para a loja {{ icone('seta') }}</a>
+</div>
+{% endblock %}

@@ -1,0 +1,8 @@
+# Redis local para desenvolvimento: docker compose up -d
+# (MongoDB e Supabase ficam na nuvem: Atlas e supabase.com)
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped

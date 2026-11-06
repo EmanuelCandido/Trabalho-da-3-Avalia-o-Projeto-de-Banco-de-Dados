@@ -1,0 +1,41 @@
+{% macro icone(nome, classe='') -%}
+<svg class="i {{ classe }}" aria-hidden="true"><use href="#i-{{ nome }}"/></svg>
+{%- endmacro %}
+
+{% macro estrelas(nota, classe='') -%}
+<span class="estrelas {{ classe }}" role="img" aria-label="{{ nota }} de 5 estrelas">
+  {%- for n in range(1, 6) -%}
+  <svg class="i {{ 'cheia' if nota >= n else ('meia' if nota >= n - 0.5 else '') }}" aria-hidden="true"><use href="#i-estrela"/></svg>
+  {%- endfor -%}
+</span>
+{%- endmacro %}
+
+{% macro card(p, i=0, compacto=false) -%}
+<article class="card revelar {{ 'card--compacto' if compacto }}" style="--atraso: {{ (i % 4) * 70 }}ms">
+  <a class="card__link" href="{{ url_for('loja.produto', slug=p.slug) }}">
+    <div class="card__foto esqueleto">
+      <img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}"
+           alt="{{ p.nome }}" loading="lazy" decoding="async" onload="this.parentNode.classList.add('carregou')">
+      {% if p.imagens|length > 1 %}
+      <img class="card__foto2" src="{{ p.imagens[1] }}" alt="" loading="lazy" decoding="async" aria-hidden="true">
+      {% endif %}
+      <div class="card__selos">
+        {% if p.estoque <= 0 %}<span class="selo selo--esgotado">Esgotado</span>
+        {% elif p.desconto_pct %}<span class="selo">-{{ p.desconto_pct }}%</span>
+        {% elif p.destaques.novidade %}<span class="selo selo--claro">Novo</span>{% endif %}
+      </div>
+      <span class="card__ver">Ver produto {{ icone('seta') }}</span>
+    </div>
+    <h3 class="card__nome">{{ p.nome }}</h3>
+    <p class="card__vendidos">{{ '{:,}'.format(p.vendidos).replace(',', '.') }} vendidos</p>
+    <p class="card__preco">
+      {% if p.preco_final < p.preco %}<s>{{ p.preco|brl }}</s>{% endif %}
+      <strong>{{ p.preco_final|brl }}</strong>
+    </p>
+    <p class="card__cores">
+      {% for c in p.cores[:4] %}<span class="bolinha" style="--cor: {{ c.hex }}" title="{{ c.nome }}"></span>{% endfor %}
+      <span>{{ p.cores|length }} {{ 'cor' if p.cores|length == 1 else 'cores' }}</span>
+    </p>
+  </a>
+</article>
+{%- endmacro %}

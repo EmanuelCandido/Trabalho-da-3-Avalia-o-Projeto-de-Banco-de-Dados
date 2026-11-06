@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Produtos{% endblock %}
+{% block cabecalho %}Produtos{% endblock %}
+{% block conteudo %}
+<div class="topo-lista">
+  <form class="busca-adm" method="get" role="search">
+    {{ icone('busca') }}
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome, cor, material…" aria-label="Buscar produtos" data-filtrar-tabela>
+    <select name="categoria" onchange="this.form.submit()" aria-label="Categoria">
+      <option value="">Todas as categorias</option>
+      {% for c in categorias %}<option {{ 'selected' if categoria == c }}>{{ c }}</option>{% endfor %}
+    </select>
+  </form>
+  <a class="botao" href="{{ url_for('admin.novo_produto') }}">{{ icone('mais') }} Novo produto</a>
+</div>
+
+<p class="contagem"><b data-contagem>{{ itens|length }}</b> produto{{ 's' if itens|length != 1 }} no MongoDB</p>
+
+{% if itens %}
+<div class="cartao cartao--tabela">
+  <table class="tabela tabela--produtos">
+    <thead><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Ativo</th><th class="direita">Ações</th></tr></thead>
+    <tbody>
+      {% for p in itens %}
+      <tr class="entrar {{ 'linha--nova' if novo == p.id }}" style="--i: {{ [loop.index0, 12]|min }}" data-linha data-id="{{ p.id }}" data-nome="{{ p.nome }}"
+          data-busca="{{ (p.nome ~ ' ' ~ p.categoria ~ ' ' ~ p.cores|map(attribute='nome')|join(' '))|lower }}">
+        <td>
+          <div class="produto-celula">
+            <img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="" loading="lazy">
+            <div><b>{{ p.nome }}</b>
+              <small>
+                {% for c in p.cores[:4] %}<span class="bolinha" style="--cor: {{ c.hex }}" title="{{ c.nome }}"></span>{% endfor %}
+                {{ p.tamanhos|join(' · ') }}
+                {% if p.destaques.oferta %}<span class="etiqueta etiqueta--mini">oferta</span>{% endif %}
+                {% if p.destaques.novidade %}<span class="etiqueta etiqueta--mini">novo</span>{% endif %}
+                {% if p.destaques.queridinho %}<span class="etiqueta etiqueta--mini">queridinho</span>{% endif %}
+              </small></div>
+          </div>
+        </td>
+        <td>{{ p.categoria }}<small class="bloco">{{ p.genero }}</small></td>
+        <td>{% if p.preco_final < p.preco %}<s class="suave">{{ p.preco|brl }}</s><br>{% endif %}<b>{{ p.preco_final|brl }}</b></td>
+        <td><span class="estoque {{ 'estoque--zero' if p.estoque <= 0 else ('estoque--baixo' if p.estoque <= 5) }}">{{ p.estoque }}</span></td>
+        <td>
+          <label class="chave" title="Mostrar ou esconder na loja">
+            <input type="checkbox" {{ 'checked' if p.ativo }} data-alternar="{{ url_for('admin.alternar_ativo', produto_id=p.id) }}">
+            <span></span>
+          </label>
+        </td>
+        <td class="direita acoes">
+          <a class="botao-icone" href="{{ url_for('loja.produto', slug=p.slug) }}" target="_blank" rel="noopener" title="Ver na loja">{{ icone('olho') }}</a>
+          <button class="botao-icone" type="button" title="Ver documento no MongoDB" data-ver-doc="{{ url_for('admin.documento', produto_id=p.id) }}">{{ icone('folha-mongo') }}</button>
+          <a class="botao-icone" href="{{ url_for('admin.editar_produto', produto_id=p.id) }}" title="Editar">{{ icone('editar') }}</a>
+          <button class="botao-icone botao-icone--perigo" type="button" title="Excluir" data-excluir="{{ url_for('admin.excluir_produto', produto_id=p.id) }}">{{ icone('lixeira') }}</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="vazio-mini" data-sem-resultado hidden>Nenhum produto com esse termo.</p>
+</div>
+{% else %}
+<div class="vazio-grande">
+  <span>{{ icone('caixa') }}</span>
+  <h2>Nenhum produto cadastrado ainda</h2>
+  <p class="suave">Cadastre o primeiro ou rode <code>python scripts/seed.py</code> para carregar o catálogo de exemplo.</p>
+  <a class="botao" href="{{ url_for('admin.novo_produto') }}">{{ icone('mais') }} Cadastrar produto</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "loja/base.html" %}
+{% from "_macros.html" import icone, estrelas %}
+{% block titulo %}{{ p.nome }} — NOMA{% endblock %}
+{% block conteudo %}
+{% set esgotado = p.estoque <= 0 %}
+{% set tamanhos = p.tamanhos|reject('equalto', 'Único')|list %}
+<div class="pagina produto" data-produto="{{ p.id }}" data-slug="{{ p.slug }}">
+  <nav class="trilha" aria-label="Você está em">
+    <a href="{{ url_for('loja.inicio') }}">Início</a>{{ icone('direita') }}
+    <a href="{{ url_for('loja.listagem', secao='roupas' if p.categoria == 'Roupas' else 'acessorios') }}">{{ p.categoria }}</a>{{ icone('direita') }}
+    <span>{{ p.nome }}</span>
+  </nav>
+
+  <div class="produto__topo">
+    <div class="galeria galeria--{{ [p.imagens|length, 4]|min }}" data-galeria>
+      {% for img in p.imagens %}
+      <button class="galeria__foto esqueleto revelar" style="--atraso: {{ loop.index0 * 80 }}ms" type="button" data-zoom="{{ img }}" aria-label="Ampliar foto {{ loop.index }}">
+        <img src="{{ img }}" alt="{{ p.nome }} — foto {{ loop.index }}" {{ 'loading=lazy' if loop.index > 2 }} onload="this.parentNode.classList.add('carregou')">
+      </button>
+      {% endfor %}
+    </div>
+
+    <section class="info" aria-label="Comprar">
+      <div class="info__fixo">
+        <h1 class="info__nome">{{ p.nome }}</h1>
+        <p class="info__vendidos">
+          {{ '{:,}'.format(p.vendidos).replace(',', '.') }} vendidos
+          {% if p.nota_media %}<a href="#avaliacoes" class="info__nota">{{ estrelas(p.nota_media) }} {{ p.nota_media|string|replace('.', ',') }} ({{ p.total_avaliacoes }})</a>{% endif %}
+        </p>
+        <div class="info__preco">
+          {% if p.preco_final < p.preco %}<s>{{ p.preco|brl }}</s>{% endif %}
+          <strong>{{ p.preco_final|brl }}</strong>
+          {% if p.desconto_pct %}<span class="selo">-{{ p.desconto_pct }}%</span>{% endif %}
+        </div>
+        <p class="info__parcelas">{{ p.preco_final|parcelas }} · <b>{{ (p.preco_final * 0.9)|brl }}</b> no Pix</p>
+
+        <form class="compra" data-compra novalidate>
+          {% if p.cores %}
+          <fieldset class="opcoes" data-grupo="cor">
+            <legend>Cor: <b data-cor-nome>{{ p.cores[0].nome }}</b></legend>
+            <div class="opcoes__lista">
+              {% for c in p.cores %}
+              <label class="cor" title="{{ c.nome }}">
+                <input type="radio" name="cor" value="{{ c.nome }}" {{ 'checked' if loop.first }}>
+                <span style="--cor: {{ c.hex }}"></span>
+              </label>
+              {% endfor %}
+            </div>
+          </fieldset>
+          {% endif %}
+
+          {% if tamanhos %}
+          <fieldset class="opcoes" data-grupo="tamanho">
+            <legend>Tamanho{% if not esgotado %}: <b data-tam-nome>escolha</b>{% endif %}</legend>
+            <div class="opcoes__lista">
+              {% for t in tamanhos %}
+              <label class="tam {{ 'tam--off' if esgotado }}">
+                <input type="radio" name="tamanho" value="{{ t }}" {{ 'disabled' if esgotado }}>
+                <span>{{ t }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <p class="opcoes__aviso" data-aviso-tamanho hidden>{{ icone('alerta') }} Escolha um tamanho para continuar.</p>
+          </fieldset>
+          <div class="duvida">
+            <p>{{ icone('ajuda') }} Ficou com dúvidas sobre o seu tamanho?</p>
+            <button class="botao botao--contorno botao--mini" type="button" data-abrir-modal="medidas">{{ icone('regua') }} Guia de medidas</button>
+          </div>
+          {% endif %}
+
+          <fieldset class="opcoes">
+            <legend>Quantidade</legend>
+            <div class="qtd" data-qtd>
+              <button type="button" class="qtd__btn" data-menos aria-label="Diminuir" {{ 'disabled' if esgotado }}>{{ icone('menos') }}</button>
+              <output data-valor>1</output>
+              <button type="button" class="qtd__btn qtd__btn--cheio" data-mais aria-label="Aumentar" {{ 'disabled' if esgotado }}>{{ icone('mais') }}</button>
+            </div>
+            {% if not esgotado and p.estoque <= 5 %}<p class="info__ultimas">{{ icone('relogio') }} Últimas {{ p.estoque }} unidades</p>{% endif %}
+          </fieldset>
+
+          {% if esgotado %}
+          <button class="botao botao--largo botao--esgotado" type="button" disabled>Esgotado</button>
+          {% else %}
+          <button class="botao botao--largo botao--comprar" type="submit" data-adicionar data-max="{{ p.estoque }}">
+            <span class="botao__txt">Adicionar ao carrinho</span>
+            <span class="botao__ok">{{ icone('check') }} Adicionado</span>
+          </button>
+          {% endif %}
+        </form>
+
+        <ul class="garantias">
+          <li>{{ icone('caminhao') }} Frete grátis acima de R$ 299</li>
+          <li>{{ icone('troca') }} Primeira troca grátis em 30 dias</li>
+          <li>{{ icone('escudo') }} Compra segura</li>
+        </ul>
+
+        <div class="sanfonas">
+          <details class="sanfona" open>
+            <summary>{{ icone('ajuda') }} Descrição {{ icone('baixo', 'sanfona__seta') }}</summary>
+            <div class="sanfona__corpo"><p>{{ p.descricao }}</p></div>
+          </details>
+          <details class="sanfona">
+            <summary>{{ icone('folha') }} Características {{ icone('baixo', 'sanfona__seta') }}</summary>
+            <div class="sanfona__corpo">
+              <dl class="atributos">
+                <div><dt>Gênero</dt><dd>{{ p.genero }}</dd></div>
+                {% if p.material %}<div><dt>Material</dt><dd>{{ p.material }}</dd></div>{% endif %}
+                {% for k, v in p.atributos.items() %}<div><dt>{{ k }}</dt><dd>{{ v }}</dd></div>{% endfor %}
+              </dl>
+            </div>
+          </details>
+          <details class="sanfona">
+            <summary>{{ icone('floco') }} Composição {{ icone('baixo', 'sanfona__seta') }}</summary>
+            <div class="sanfona__corpo"><p>{{ p.composicao or 'Consulte a etiqueta da peça.' }}</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  {# ------------------------------------------------ avaliações #}
+  <section class="avaliacoes" id="avaliacoes">
+    <h2 class="avaliacoes__titulo revelar">Avaliações do produto</h2>
+    <div class="avaliacoes__caixa revelar">
+      <div class="avaliacoes__resumo">
+        <div class="avaliacoes__nota">
+          <strong>{{ (p.nota_media or 0)|string|replace('.', ',') }}</strong>
+          <div>{{ estrelas(p.nota_media or 0) }}<small>{{ p.total_avaliacoes }} {{ 'avaliação' if p.total_avaliacoes == 1 else 'avaliações' }}</small></div>
+        </div>
+        <p class="avaliacoes__dist-titulo">Distribuição das notas</p>
+        <ul class="dist">
+          {% for d in p.distribuicao %}
+          <li><span>{{ d.nota }}</span><span class="dist__barra"><i style="--pct: {{ (d.qtd / p.total_avaliacoes * 100) if p.total_avaliacoes else 0 }}%"></i></span><span>{{ d.qtd }}</span></li>
+          {% endfor %}
+        </ul>
+        <button class="botao botao--largo" type="button" data-abrir-modal="avaliar">Escrever avaliação</button>
+      </div>
+      <div class="opinioes">
+        <div class="opinioes__cabeca">
+          <h3>Opiniões de clientes</h3>
+          <span class="suave">Mais recentes</span>
+        </div>
+        {% if p.avaliacoes %}
+        <div class="abas" role="tablist" data-abas-notas>
+          <button class="aba ativa" type="button" data-nota="todas">Todas ({{ p.total_avaliacoes }})</button>
+          {% for d in p.distribuicao if d.qtd %}
+          <button class="aba" type="button" data-nota="{{ d.nota }}">{{ d.nota }} estrela{{ 's' if d.nota > 1 }} ({{ d.qtd }})</button>
+          {% endfor %}
+        </div>
+        <ul class="opinioes__lista">
+          {% for a in p.avaliacoes %}
+          <li class="opiniao" data-nota-item="{{ a.nota }}">
+            {{ estrelas(a.nota) }}
+            <h4>{{ a.titulo }}</h4>
+            {% if a.texto %}<p>{{ a.texto }}</p>{% endif %}
+            <small>{{ a.nome }}{% if a.tamanho %} · Tamanho {{ a.tamanho }}{% endif %}{% if a.cor %} · {{ a.cor }}{% endif %} · {{ a.data|data('%d/%m/%Y') }}</small>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="opinioes__vazio">
+          {{ estrelas(0) }}
+          <p>Este produto ainda não tem avaliações. Que tal ser a primeira pessoa?</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% include "loja/_vistos.html" %}
+</div>
+
+{# ------------------------------------------------ modais da página #}
+<div class="modal" data-modal="avaliar" role="dialog" aria-modal="true" aria-labelledby="av-titulo" hidden>
+  <div class="modal__caixa">
+    <button class="modal__fechar botao-icone botao-icone--suave" type="button" data-fechar-modal aria-label="Fechar">{{ icone('fechar') }}</button>
+    <h2 id="av-titulo">Avaliar “{{ p.nome }}”</h2>
+    <form class="form-avaliar" data-form-avaliar novalidate>
+      <div class="campo">
+        <span>Sua nota</span>
+        <div class="avaliar-estrelas" data-avaliar-estrelas role="radiogroup" aria-label="Nota">
+          {% for n in range(1, 6) %}
+          <button type="button" role="radio" aria-checked="false" data-n="{{ n }}" aria-label="{{ n }} estrela{{ 's' if n > 1 }}">{{ icone('estrela') }}</button>
+          {% endfor %}
+        </div>
+        <small class="campo__erro" data-erro="nota" hidden></small>
+      </div>
+      <label class="campo"><span>Seu nome</span><input name="nome" maxlength="40" required autocomplete="given-name"><small class="campo__erro" data-erro="nome" hidden></small></label>
+      <label class="campo"><span>Título</span><input name="titulo" maxlength="80" required placeholder="Ex.: Ótimo caimento"><small class="campo__erro" data-erro="titulo" hidden></small></label>
+      <label class="campo"><span>Comentário <em>(opcional)</em></span><textarea name="texto" rows="3" maxlength="600"></textarea></label>
+      {% if tamanhos %}
+      <label class="campo"><span>Tamanho que você comprou <em>(opcional)</em></span>
+        <select name="tamanho"><option value="">—</option>{% for t in tamanhos %}<option>{{ t }}</option>{% endfor %}</select></label>
+      {% endif %}
+      <input type="hidden" name="cor" value="{{ p.cores[0].nome if p.cores }}">
+      <button class="botao botao--largo" type="submit">Publicar avaliação</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal" data-modal="medidas" role="dialog" aria-modal="true" aria-labelledby="med-titulo" hidden>
+  <div class="modal__caixa">
+    <button class="modal__fechar botao-icone botao-icone--suave" type="button" data-fechar-modal aria-label="Fechar">{{ icone('fechar') }}</button>
+    <h2 id="med-titulo">Guia de medidas</h2>
+    {% include "loja/_tabela_medidas.html" %}
+  </div>
+</div>
+
+<div class="zoom" data-zoom-caixa hidden><img alt="" data-zoom-img><button class="botao-icone zoom__fechar" type="button" aria-label="Fechar">{{ icone('fechar') }}</button></div>
+{% endblock %}

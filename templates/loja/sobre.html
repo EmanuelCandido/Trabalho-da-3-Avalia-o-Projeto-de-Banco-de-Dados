@@ -1,0 +1,26 @@
+{% extends "loja/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Sobre a NOMA{% endblock %}
+{% block conteudo %}
+<div class="pagina institucional">
+  <section class="sobre">
+    <div class="sobre__texto revelar">
+      <p class="hero__chapeu escuro">Sobre a NOMA</p>
+      <h1>Menos excessos.<br><span>Mais possibilidades.</span></h1>
+      <p>A NOMA nasceu de uma ideia simples: ter menos peças e usar cada uma mais vezes. Desenhamos roupas e acessórios essenciais, em tecidos naturais e cores que conversam entre si, para você montar dezenas de combinações com pouco.</p>
+      <p>Produzimos em pequenos lotes, com oficinas parceiras no Brasil, e testamos cada modelagem antes de chegar à loja.</p>
+      <ul class="numeros">
+        <li><strong>2019</strong><span>ano de fundação</span></li>
+        <li><strong>18</strong><span>peças essenciais</span></li>
+        <li><strong>4,7★</strong><span>nota média</span></li>
+      </ul>
+    </div>
+    <div class="sobre__foto revelar esqueleto"><img src="{{ url_for('static', filename='img/admin-login.jpg') }}" alt="Arara com roupas em tons neutros no ateliê" onload="this.parentNode.classList.add('carregou')"></div>
+  </section>
+  <section class="valores">
+    <article class="revelar">{{ icone('folha') }}<h3>Tecidos naturais</h3><p>Algodão, linho e couro de origem rastreada.</p></article>
+    <article class="revelar" style="--atraso:80ms">{{ icone('camiseta') }}<h3>Feito para durar</h3><p>Costuras reforçadas e modelagens que não saem de moda.</p></article>
+    <article class="revelar" style="--atraso:160ms">{{ icone('troca') }}<h3>Troca sem drama</h3><p>Primeira troca grátis em até 30 dias.</p></article>
+  </section>
+</div>
+{% endblock %}

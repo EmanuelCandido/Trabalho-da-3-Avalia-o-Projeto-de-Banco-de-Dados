@@ -1,0 +1,81 @@
+{% from "_macros.html" import icone %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block titulo %}Painel{% endblock %} — NOMA</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ versao_estatico }}">
+</head>
+<body>
+  {% include "_icones.html" %}
+  {% set admin = session.get('admin') %}
+  {% set rota = request.endpoint %}
+  <div class="painel">
+    <aside class="lateral" data-lateral>
+      <a class="lateral__logo" href="{{ url_for('admin.dashboard') }}">NOMA <small>painel</small></a>
+      <nav class="lateral__nav">
+        <a href="{{ url_for('admin.dashboard') }}" class="{{ 'ativo' if rota == 'admin.dashboard' }}">{{ icone('grafico') }} Dashboard</a>
+        <a href="{{ url_for('admin.produtos') }}" class="{{ 'ativo' if rota in ('admin.produtos', 'admin.editar_produto') }}">{{ icone('grade') }} Produtos</a>
+        <a href="{{ url_for('admin.novo_produto') }}" class="{{ 'ativo' if rota == 'admin.novo_produto' }}">{{ icone('mais') }} Novo produto</a>
+        <a href="{{ url_for('admin.pedidos') }}" class="{{ 'ativo' if rota == 'admin.pedidos' }}">{{ icone('pedido') }} Pedidos</a>
+        <a href="{{ url_for('admin.configuracoes') }}" class="{{ 'ativo' if rota == 'admin.configuracoes' }}">{{ icone('ajustes') }} Configurações</a>
+        <a href="{{ url_for('loja.inicio') }}" target="_blank" rel="noopener">{{ icone('loja') }} Ver loja {{ icone('externo', 'i--mini') }}</a>
+      </nav>
+      <div class="lateral__bancos">
+        <p>Bancos do projeto</p>
+        <span>{{ icone('supabase') }} Supabase · login e pedidos</span>
+        <span>{{ icone('folha-mongo') }} MongoDB · produtos</span>
+        <span>{{ icone('redis') }} Redis · cache e carrinho</span>
+      </div>
+    </aside>
+
+    <div class="principal">
+      <header class="barra">
+        <button class="barra__menu botao-icone" type="button" data-abrir-lateral aria-label="Abrir menu">{{ icone('menu') }}</button>
+        <h1 class="barra__titulo">{% block cabecalho %}{% endblock %}</h1>
+        <div class="barra__usuario">
+          <span class="avatar" aria-hidden="true">{{ admin.nome[:1] if admin else '?' }}</span>
+          <div class="barra__quem"><b>{{ admin.nome if admin }}</b><small>{{ admin.email if admin }} · via {{ admin.via if admin }}</small></div>
+          <form method="post" action="{{ url_for('admin.sair') }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+            <button class="botao-icone" type="submit" aria-label="Sair" title="Sair">{{ icone('sair') }}</button>
+          </form>
+        </div>
+      </header>
+      <main class="conteudo">{% block conteudo %}{% endblock %}</main>
+    </div>
+  </div>
+
+  <div class="modal" data-modal="confirmar" role="alertdialog" aria-modal="true" aria-labelledby="conf-titulo" hidden>
+    <div class="modal__caixa modal__caixa--estreita">
+      <span class="modal__icone">{{ icone('lixeira') }}</span>
+      <h2 id="conf-titulo" data-conf-titulo>Excluir produto?</h2>
+      <p class="suave" data-conf-texto></p>
+      <div class="modal__acoes">
+        <button class="botao botao--contorno" type="button" data-fechar-modal>Cancelar</button>
+        <button class="botao botao--perigo" type="button" data-confirmar>Excluir</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" data-modal="documento" role="dialog" aria-modal="true" aria-labelledby="doc-titulo" hidden>
+    <div class="modal__caixa modal__caixa--codigo">
+      <button class="modal__fechar botao-icone" type="button" data-fechar-modal aria-label="Fechar">{{ icone('fechar') }}</button>
+      <h2 id="doc-titulo">{{ icone('folha-mongo') }} Documento no MongoDB</h2>
+      <p class="suave">Coleção <code>produtos</code>: repare nos campos que variam de um produto para outro.</p>
+      <pre class="codigo" data-doc-json></pre>
+    </div>
+  </div>
+
+  <div class="toasts" data-toasts aria-live="polite"></div>
+  {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% if mensagens %}<script type="application/json" id="flash">{{ mensagens|tojson }}</script>{% endif %}
+  {% endwith %}
+  <script src="{{ url_for('static', filename='js/admin.js') }}?v={{ versao_estatico }}" defer></script>
+</body>
+</html>
