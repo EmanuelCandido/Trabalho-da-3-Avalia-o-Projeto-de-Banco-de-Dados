@@ -208,6 +208,7 @@
       remover.addEventListener("click", () => {
         entrada.value = ""; img.hidden = true; img.removeAttribute("src"); zona.classList.remove("tem-foto");
         remover.hidden = true; flag.value = "1"; fotos[campo] = ""; desenhar();
+        const atual = $(`[data-foto-atual="${campo}"]`); if (atual) atual.value = "";
       });
     });
 

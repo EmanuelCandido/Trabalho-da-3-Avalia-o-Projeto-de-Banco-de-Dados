@@ -329,6 +329,11 @@ def configuracoes():
 # ---------------------------------------------------------------- vitrine: banners do carrossel e faixa do topo
 
 COR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _link_valido(link):
+    """Endereço da própria loja (/ofertas) ou link https://. "//site.com" seria outro domínio, então é recusado."""
+    return (link.startswith("/") and not link.startswith("//")) or re.match(r"^https://[^\s\"'<>]+$", link) is not None
 LINKS_PRONTOS = [("/ofertas", "Ofertas da Black"), ("/novidades", "Novidades"), ("/roupas", "Roupas"),
                  ("/acessorios", "Acessórios"), ("/sobre", "Sobre a NOMA"), ("/atendimento", "Atendimento")]
 
@@ -383,7 +388,7 @@ def salvar_faixa():
     erros = {}
     texto = (f.get("faixa_promocional") or "").strip()[:70]
     link = (f.get("faixa_link") or "").strip()[:200]
-    if link and not (link.startswith("/") or link.startswith("https://")):
+    if link and not _link_valido(link):
         erros["faixa_link"] = "Use um endereço da loja (ex.: /ofertas) ou um link https://"
     try:
         termina = ler_data_hora(f.get("faixa_termina_em"))
@@ -432,7 +437,7 @@ def _ler_banner(atual=None):
         erros["titulo"] = "Escreva o título do banner."
     botao_texto = (f.get("botao_texto") or "").strip()[:24]
     botao_link = (f.get("botao_link") or "").strip()[:200]
-    if botao_texto and not (botao_link.startswith("/") or botao_link.startswith("https://")):
+    if botao_texto and not _link_valido(botao_link):
         erros["botao_link"] = "Escolha para onde o botão leva (ex.: /ofertas)."
     cor = f.get("cor_fundo", "#1d3a52")
     if not COR_HEX.match(cor):
@@ -449,6 +454,10 @@ def _ler_banner(atual=None):
         erros["fim"] = "O fim precisa ser depois do início."
 
     imagens = {"imagem": (atual or {}).get("imagem"), "imagem_celular": (atual or {}).get("imagem_celular")}
+    for campo in imagens:
+        anterior = (f.get(f"{campo}_atual") or "").strip()
+        if anterior.startswith(("/imagem/", "/static/img/banners/")):
+            imagens[campo] = anterior
     for campo, largura in (("imagem", 1920), ("imagem_celular", 900)):
         if f.get(f"remover_{campo}") == "1":
             imagens[campo] = None
@@ -481,12 +490,12 @@ def _form_banner(b, erros, editando):
 @bp.route("/vitrine/banners/novo", methods=["GET", "POST"])
 @admin_obrigatorio
 def novo_banner():
+    if mongo.contar_banners()[0] >= mongo.MAX_BANNERS:
+        flash(f"Limite de {mongo.MAX_BANNERS} banners. Exclua um antes de criar outro.", "erro")
+        return redirect(url_for("admin.vitrine"))
     if request.method == "POST":
         dados, erros = _ler_banner()
         if not erros:
-            if mongo.contar_banners()[0] >= mongo.MAX_BANNERS:
-                flash(f"Limite de {mongo.MAX_BANNERS} banners. Exclua um antes de criar outro.", "erro")
-                return redirect(url_for("admin.vitrine"))
             mongo.salvar_banner(dados)
             redis_store.invalidar_cache()
             flash("Banner criado e salvo no MongoDB.", "ok")

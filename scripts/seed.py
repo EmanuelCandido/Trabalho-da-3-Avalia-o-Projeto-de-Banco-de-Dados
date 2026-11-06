@@ -2,7 +2,7 @@
 
 Uso:
     python scripts/seed.py            # insere ou atualiza pelos slugs (não apaga o que o admin cadastrou)
-    python scripts/seed.py --limpar   # apaga todos os produtos antes
+    python scripts/seed.py --limpar   # apaga todos os produtos e banners antes (recria os 2 banners iniciais)
 """
 import random
 import sys

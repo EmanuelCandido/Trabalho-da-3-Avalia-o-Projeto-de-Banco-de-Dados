@@ -77,7 +77,7 @@ def criar_app():
                     qtd = 0
         return {"csrf_token": csrf_token, "qtd_carrinho": qtd, "url_atual": url_atual,
                 "loja": config_loja() if not request.path.startswith("/static") else {},
-                "ano": datetime.now().year, "versao_estatico": "15"}
+                "ano": datetime.now().year, "versao_estatico": "18"}
 
     @app.after_request
     def cabecalhos(resposta):
@@ -88,6 +88,11 @@ def criar_app():
             # CSS e JS levam ?v=N no endereço: podem ficar no cache por 1 ano sem risco de versão velha.
             resposta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         return resposta
+
+    @app.get("/favicon.ico")
+    def favicon():
+        # navegadores pedem /favicon.ico mesmo com o ícone SVG declarado na página
+        return app.send_static_file("img/favicon.svg")
 
     @app.errorhandler(404)
     def nao_encontrado(_erro):

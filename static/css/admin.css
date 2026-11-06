@@ -298,7 +298,8 @@ tr:hover .produto-celula img { transform: scale(1.06); }
 
 /* pedidos */
 .pedidos { display: grid; gap: 10px; }
-.pedido { padding: 0; overflow: hidden; }
+.pedido { padding: 0; }
+.pedido > summary { border-radius: var(--raio-g); }
 .pedido summary { list-style: none; display: grid; grid-template-columns: 1.1fr 1.4fr auto 110px 20px; gap: 14px; align-items: center; padding: 16px 20px; cursor: pointer; transition: background .2s; }
 .pedido summary::-webkit-details-marker { display: none; }
 .pedido summary:hover { background: #fafafb; }
@@ -382,7 +383,7 @@ tr:hover .produto-celula img { transform: scale(1.06); }
   .produto-celula { min-width: 190px; }
   .modal__acoes { flex-direction: column-reverse; }
 }
-.pedido__corpo { overflow-x: auto; }
+.pedido__corpo .tabela { display: block; overflow-x: auto; white-space: nowrap; }
 @media (max-width: 860px) {
   .busca-adm { width: 100%; }
   .busca-adm select { max-width: 42%; min-width: 0; }
@@ -514,3 +515,6 @@ em.perto { color: var(--laranja) !important; }
   .segmentado label { flex: 1; }
   .segmentado span { justify-content: center; }
 }
+
+/* o controle deslizante não herda a caixa dos campos de texto */
+.campo input[type="range"] { border: 0 !important; padding: 0 !important; min-height: 0 !important; height: 26px; box-shadow: none !important; background: transparent !important; }

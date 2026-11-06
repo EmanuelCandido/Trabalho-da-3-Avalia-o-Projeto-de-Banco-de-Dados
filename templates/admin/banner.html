@@ -46,6 +46,7 @@
             <span class="soltar__vazio">{{ icone('upload') }}<b>Arraste ou clique</b><span>{{ dica }}</span></span>
           </label>
           <input type="hidden" name="remover_{{ campo }}" value="0" data-remover-campo="{{ campo }}">
+          <input type="hidden" name="{{ campo }}_atual" value="{{ b[campo] or '' }}" data-foto-atual="{{ campo }}">
           <button type="button" class="link link--perigo" data-remover-foto-banner="{{ campo }}" {{ 'hidden' if not b[campo] }}>{{ icone('lixeira') }} Remover imagem</button>
           {{ erro(campo) }}
         </div>
