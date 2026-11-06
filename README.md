@@ -74,6 +74,21 @@ O painel fica em **http://127.0.0.1:5000/admin** (ou no ícone de pessoa no topo
 
 > **Sem o Supabase Auth configurado** (sem `SUPABASE_URL`/`SUPABASE_ANON_KEY`), o login usa um modo local de desenvolvimento: a senha é conferida no próprio PostgreSQL com `pgcrypto`. O dashboard avisa quando isso acontece.
 
+## Desempenho (aparelhos fracos e redes lentas)
+
+| Medida (página inicial) | Antes | Depois |
+|---|---|---|
+| HTML transferido | 35 KB | 7 KB (brotli) |
+| CSS + JS transferidos | 83 KB | 20 KB |
+| Imagens baixadas no celular | 874 KB | 184 KB |
+| Tempo de resposta do servidor | 230 ms | 55 ms |
+
+- **Imagens em WebP** com dois tamanhos (`srcset`): cards e carrinho usam a versão de 480 px; a página do produto usa 900 px só quando a tela pede. O banner do celular é uma imagem vertical própria e o segundo banner só baixa depois que a página carregou. Fotos enviadas pelo admin também viram WebP. Script: `python scripts/otimizar_imagens.py`.
+- **Compressão brotli/gzip** (Flask-Compress) e **cache no navegador**: CSS e JS por 1 ano (o endereço muda a cada versão), imagens por 30 dias.
+- **Fonte sem bloquear a página** (uma única fonte variável, carregada em paralelo).
+- **Menos idas ao Redis**: configurações da loja guardadas 30 s na memória do servidor, visitante novo não consulta carrinho nem vistos, e "registrar visita + listar vistos" é um único comando (pipeline).
+- **Modo leve automático**: com economia de dados, rede 2G/3G ou aparelho com pouca memória/processador, o site desliga desfoques, animações contínuas, troca de foto no hover e o carrossel automático. Em telas de toque a segunda foto do card nem é baixada. Partes longe da primeira tela (rodapé, avaliações, vistos) só são desenhadas quando chegam perto.
+
 ## Arquitetura
 
 ```
@@ -92,7 +107,7 @@ Navegador ──► Flask (Python)
 | `bancos/supabase.py` | Supabase Auth (GoTrue), pool de conexões e chamadas SQL |
 | `bancos/redis_store.py` | Listas, hashes, sorted sets, cache-aside com versão e contadores com TTL |
 | `database/supabase.sql` | Tabelas, função `registrar_pedido`, view `vw_resumo_vendas` e RLS |
-| `scripts/` | `setup_supabase.py` (tabelas + admin) e `seed.py` (catálogo) |
+| `scripts/` | `setup_supabase.py` (tabelas + admin), `seed.py` (catálogo) e `otimizar_imagens.py` (WebP) |
 | `templates/`, `static/` | Telas (Jinja2), CSS e JavaScript puro |
 
 ### MongoDB — documento de um produto
@@ -108,7 +123,7 @@ Cada produto pode ter campos diferentes em `atributos` (uma polo tem "Gola"; um 
   "estoque": 18, "vendidos": 672,
   "cores": [{"nome": "Dust Beige", "hex": "#b8a7a2"}],
   "tamanhos": ["P", "M", "G", "GG", "XGG"],
-  "imagens": ["/static/img/produtos/polo-1.jpg", "/imagem/6730f…"],
+  "imagens": ["/static/img/produtos/polo-1.webp", "/imagem/6730f…"],
   "atributos": {"Gola": "Polo com 3 botões", "Tecnologia": "Controle térmico com grafeno"},
   "destaques": {"oferta": true, "queridinho": false, "novidade": false},
   "avaliacoes": [{"nome": "André L.", "nota": 5, "titulo": "Ótimo caimento", "…": "…"}],

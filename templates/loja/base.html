@@ -10,8 +10,19 @@
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap"></noscript>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/noma.css') }}?v={{ versao_estatico }}">
+  <script>
+    /* Modo leve: rede lenta, economia de dados ou aparelho fraco -> menos animações e efeitos caros */
+    (function () {
+      var n = navigator, c = n.connection || {}, d = document.documentElement;
+      if (c.saveData || /(^|-)2g$|^3g$/.test(c.effectiveType || "") || (n.deviceMemory && n.deviceMemory <= 2) ||
+          (n.hardwareConcurrency && n.hardwareConcurrency <= 2)) d.classList.add("leve");
+      if (/^(slow-2g|2g)$/.test(c.effectiveType || "") || c.saveData) d.classList.add("dados");
+    })();
+  </script>
+  {% block cabeca %}{% endblock %}
 </head>
 <body class="{% block classe_body %}{% endblock %}">
   {% include "_icones.html" %}

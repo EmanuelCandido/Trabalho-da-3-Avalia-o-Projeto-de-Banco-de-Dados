@@ -44,8 +44,9 @@ def _log(comando, chave, resultado, inicio):
 
 # ---------------------------------------------------------------- vistos recentemente
 
-def registrar_visto(visitante, produto_id):
-    """LREM tira o produto se já estava na lista, LPUSH põe no topo e LTRIM mantém só os 12 últimos."""
+def registrar_visto(visitante, produto_id, limite=8):
+    """LREM tira o produto se já estava na lista, LPUSH põe no topo e LTRIM mantém só os 12 últimos.
+    Devolve os outros vistos (sem o atual), lidos no mesmo pipeline: uma única ida ao Redis."""
     chave = f"{P}vistos:{visitante}"
     inicio = perf_counter()
     pipe = _r.pipeline()
@@ -54,8 +55,10 @@ def registrar_visto(visitante, produto_id):
     pipe.ltrim(chave, 0, MAX_VISTOS - 1)
     pipe.expire(chave, TTL_VISTOS)
     pipe.zincrby(f"{P}ranking:views", 1, produto_id)
-    pipe.execute()
+    pipe.lrange(chave, 1, limite)
+    ids = pipe.execute()[-1]
     _log("LPUSH", chave, produto_id[-6:], inicio)
+    return ids
 
 
 def vistos(visitante, ignorar=None, limite=MAX_VISTOS):

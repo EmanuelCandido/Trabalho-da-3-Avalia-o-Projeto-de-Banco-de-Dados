@@ -4,7 +4,9 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const CSRF = $('meta[name="csrf-token"]')?.content || "";
-  const reduzir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const leve = document.documentElement.classList.contains("leve");     // aparelho fraco ou rede lenta
+  const poucosDados = document.documentElement.classList.contains("dados");  // 2G ou economia de dados
+  const reduzir = leve || matchMedia("(prefers-reduced-motion: reduce)").matches;
   const brl = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0).replace(/ /g, " ");
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const icone = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -109,18 +111,27 @@
     let atual = 0, timer;
     const DUR = 6500;
     carrossel.style.setProperty("--duracao", DUR + "ms");
+    // Banners fora da primeira tela guardam o endereço em data-*: só baixam quando forem usados.
+    const carregarSlide = (slide) => {
+      $$("[data-srcset]", slide).forEach((el) => { el.srcset = el.dataset.srcset; delete el.dataset.srcset; });
+      $$("[data-src]", slide).forEach((el) => { el.src = el.dataset.src; delete el.dataset.src; });
+    };
+    const automatico = !poucosDados;
     const ir = (n) => {
       slides[atual].classList.remove("ativo"); pontos[atual].classList.remove("ativo");
       atual = (n + slides.length) % slides.length;
+      carregarSlide(slides[atual]);
       slides[atual].classList.add("ativo"); pontos[atual].classList.add("ativo");
-      $("img", slides[atual]).loading = "eager";
-      clearTimeout(timer); timer = setTimeout(() => ir(atual + 1), DUR);
+      clearTimeout(timer); if (automatico) timer = setTimeout(() => ir(atual + 1), DUR);
     };
+    // Depois que a página terminou de carregar, adianta o próximo banner em segundo plano.
+    if (automatico) addEventListener("load", () => (window.requestIdleCallback || setTimeout)(() => slides.forEach(carregarSlide)));
     pontos.forEach((p) => p.addEventListener("click", () => ir(+p.dataset.ponto)));
     let x0 = null;
     carrossel.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
     carrossel.addEventListener("touchend", (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) ir(atual + (dx < 0 ? 1 : -1)); x0 = null; });
-    timer = setTimeout(() => ir(1), DUR);
+    if (automatico) timer = setTimeout(() => ir(1), DUR);
+    else carrossel.classList.add("parado");
   }
 
   /* ------------------------------------------------ trilho (vistos recentemente) */

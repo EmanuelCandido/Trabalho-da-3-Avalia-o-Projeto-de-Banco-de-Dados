@@ -1,13 +1,19 @@
 {% extends "loja/base.html" %}
 {% from "_macros.html" import icone, card %}
 {% block classe_body %}pagina-inicio{% endblock %}
+{% block cabeca %}
+  {# Banner principal é o maior elemento da primeira tela: começa a baixar antes do CSS terminar #}
+  <link rel="preload" as="image" media="(max-width: 640px)" href="{{ url_for('static', filename='img/banners/banner-black-friday-m.webp') }}" fetchpriority="high">
+  <link rel="preload" as="image" media="(min-width: 641px)" imagesrcset="{{ url_for('static', filename='img/banners/banner-black-friday-1280.webp') }} 1280w, {{ url_for('static', filename='img/banners/banner-black-friday.webp') }} 1920w" imagesizes="100vw" fetchpriority="high">
+{% endblock %}
 {% block conteudo %}
 
 <section class="hero" data-carrossel aria-roledescription="carrossel" aria-label="Destaques">
   <div class="hero__slide ativo" style="--fundo: #1d3a52">
     <picture>
-      <source media="(max-width: 640px)" srcset="{{ url_for('static', filename='img/banners/banner-black-friday-m.jpg') }}">
-      <img src="{{ url_for('static', filename='img/banners/banner-black-friday.jpg') }}" alt="Homem de camiseta branca em fundo azul" fetchpriority="high">
+      <source media="(max-width: 640px)" srcset="{{ url_for('static', filename='img/banners/banner-black-friday-m.webp') }}">
+      <source srcset="{{ url_for('static', filename='img/banners/banner-black-friday-1280.webp') }} 1280w, {{ url_for('static', filename='img/banners/banner-black-friday.webp') }} 1920w" sizes="100vw">
+      <img src="{{ url_for('static', filename='img/banners/banner-black-friday-1280.webp') }}" width="1280" height="560" alt="Homem de camiseta branca em fundo azul" fetchpriority="high">
     </picture>
     <div class="hero__texto">
       <p class="hero__chapeu">Black Friday</p>
@@ -18,8 +24,9 @@
   </div>
   <div class="hero__slide" style="--fundo: #b07a4f">
     <picture>
-      <source media="(max-width: 640px)" srcset="{{ url_for('static', filename='img/banners/banner-colecao-m.jpg') }}">
-      <img src="{{ url_for('static', filename='img/banners/banner-colecao.jpg') }}" alt="Mulher de camisa de linho bege em fundo terroso" loading="lazy">
+      <source media="(max-width: 640px)" data-srcset="{{ url_for('static', filename='img/banners/banner-colecao-m.webp') }}">
+      <source data-srcset="{{ url_for('static', filename='img/banners/banner-colecao-1280.webp') }} 1280w, {{ url_for('static', filename='img/banners/banner-colecao.webp') }} 1920w" sizes="100vw">
+      <img data-src="{{ url_for('static', filename='img/banners/banner-colecao-1280.webp') }}" width="1280" height="560" alt="Mulher de camisa de linho bege em fundo terroso">
     </picture>
     <div class="hero__texto">
       <p class="hero__chapeu">Nova coleção</p>

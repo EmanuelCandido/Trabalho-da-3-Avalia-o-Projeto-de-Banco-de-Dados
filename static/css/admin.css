@@ -389,3 +389,8 @@ tr:hover .produto-celula img { transform: scale(1.06); }
 }
 .pedidos { grid-template-columns: minmax(0, 1fr); }
 .topo-lista > * { min-width: 0; max-width: 100%; }
+
+/* desempenho: modo leve sem desfoques nem animações contínuas */
+.leve .barra, .leve .modal { backdrop-filter: none; }
+.leve .pulso::after, .leve .vazio-grande > span, .leve .login__foto img { animation: none; }
+.leve .entrar { animation: none; }

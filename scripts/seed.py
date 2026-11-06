@@ -152,12 +152,12 @@ PASTA_FOTOS = Path(__file__).resolve().parent.parent / "static" / "img" / "produ
 
 
 def fotos(nomes):
-    """Foto principal de cada nome e, se existir, a segunda foto (nome-2.jpg) logo depois."""
+    """Foto principal de cada nome e, se existir, a segunda foto (nome-2.webp) logo depois."""
     lista = []
     for nome in nomes:
-        lista.append(IMG + nome + ".jpg")
-        if (PASTA_FOTOS / f"{nome}-2.jpg").exists():
-            lista.append(IMG + nome + "-2.jpg")
+        lista.append(IMG + nome + ".webp")
+        if (PASTA_FOTOS / f"{nome}-2.webp").exists():
+            lista.append(IMG + nome + "-2.webp")
     return lista
 
 

@@ -27,7 +27,7 @@
           data-busca="{{ (p.nome ~ ' ' ~ p.categoria ~ ' ' ~ p.cores|map(attribute='nome')|join(' '))|lower }}">
         <td>
           <div class="produto-celula">
-            <img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="" loading="lazy">
+            <img src="{{ miniatura(p.imagens[0]) if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="" loading="lazy">
             <div><b>{{ p.nome }}</b>
               <small>
                 {% for c in p.cores[:4] %}<span class="bolinha" style="--cor: {{ c.hex }}" title="{{ c.nome }}"></span>{% endfor %}

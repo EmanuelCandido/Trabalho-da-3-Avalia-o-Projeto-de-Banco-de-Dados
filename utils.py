@@ -1,5 +1,6 @@
 """Funções compartilhadas: visitante, CSRF, moeda, carrinho e mensagem do WhatsApp."""
 import secrets
+from time import perf_counter
 import uuid
 from functools import wraps
 from urllib.parse import quote
@@ -84,10 +85,43 @@ def ler_preco(texto):
     return round(float(texto), 2)
 
 
+# ---------------------------------------------------------------- imagens responsivas
+
+PASTA_PRODUTOS = "/static/img/produtos/"
+
+
+def miniatura(url):
+    """Versão de 480 px das fotos do catálogo (cards, carrinho e listas); outras URLs ficam iguais."""
+    if url and url.startswith(PASTA_PRODUTOS) and url.endswith(".webp") and not url.endswith("-480.webp"):
+        return url[:-5] + "-480.webp"
+    return url
+
+
+def srcset(url):
+    """srcset com os dois tamanhos (480 e 900 px) para o navegador escolher pelo tamanho da tela."""
+    mini = miniatura(url)
+    return f"{mini} 480w, {url} 900w" if mini != url else ""
+
+
 # ---------------------------------------------------------------- configurações da loja
 
+_config_memoria = {"dados": None, "lida_em": 0.0, "versao": None}
+
+
 def config_loja():
-    """Configurações vindas do Supabase, com cache curto no Redis."""
+    """Configurações vindas do Supabase, com cache no Redis e uma cópia de 30 s na memória do servidor
+    (assim a maioria das páginas não gasta nenhuma ida à rede só para isso)."""
+    agora = perf_counter()
+    versao = redis_store._versao_local["valor"]
+    if (_config_memoria["dados"] is not None and agora - _config_memoria["lida_em"] < 30
+            and _config_memoria["versao"] == versao):
+        return _config_memoria["dados"]
+    final = _config_loja_banco()
+    _config_memoria.update(dados=final, lida_em=agora, versao=redis_store._versao_local["valor"])
+    return final
+
+
+def _config_loja_banco():
     def carregar():
         try:
             return supabase.configuracoes() if supabase.configurado() else {}
@@ -123,7 +157,7 @@ def montar_carrinho(vid):
         total += subtotal
         qtd += quantidade
         economia += (p["preco"] - p["preco_final"]) * quantidade
-        imagem = p["imagens"][0] if p["imagens"] else url_for("static", filename="img/sem-foto.svg")
+        imagem = miniatura(p["imagens"][0]) if p["imagens"] else url_for("static", filename="img/sem-foto.svg")
         itens.append({
             "chave": chave, "produto_id": produto_id, "slug": p["slug"], "nome": p["nome"],
             "cor": cor, "tamanho": tamanho, "quantidade": quantidade, "estoque": p["estoque"],

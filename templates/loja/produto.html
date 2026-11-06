@@ -15,7 +15,7 @@
     <div class="galeria galeria--{{ [p.imagens|length, 4]|min }}" data-galeria>
       {% for img in p.imagens %}
       <button class="galeria__foto esqueleto revelar" style="--atraso: {{ loop.index0 * 80 }}ms" type="button" data-zoom="{{ img }}" aria-label="Ampliar foto {{ loop.index }}">
-        <img src="{{ img }}" alt="{{ p.nome }} — foto {{ loop.index }}" {{ 'loading=lazy' if loop.index > 2 }} onload="this.parentNode.classList.add('carregou')">
+        <img src="{{ img }}" srcset="{{ srcset(img) }}" sizes="(max-width: 860px) 82vw, 32vw" alt="{{ p.nome }} — foto {{ loop.index }}" {{ 'loading=lazy' if loop.index > 2 else 'fetchpriority=high' if loop.first }} decoding="async" onload="this.parentNode.classList.add('carregou')">
       </button>
       {% endfor %}
     </div>

@@ -671,3 +671,27 @@ p { margin: 0; }
 .menu-movel a.menu-movel__link .i { color: var(--apagado); }
 .menu-movel a.ativo { color: var(--azul); }
 .menu-movel__pe { margin-top: auto; padding-top: 24px; display: grid; gap: 10px; }
+
+/* ===================================================================== desempenho
+   Partes longe da primeira tela só são desenhadas quando chegam perto (economiza CPU em aparelhos fracos). */
+.rodape, .avaliacoes, .vistos { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+.parado .hero__pontos button.ativo i { animation: none; transform: none; }
+
+/* Telas de toque não têm "hover": a segunda foto do card nem é baixada (imagem lazy + display none). */
+@media (hover: none) {
+  .card__foto2, .card__ver { display: none; }
+  .card:hover .card__foto img { transform: none; }
+}
+
+/* Modo leve (rede lenta, economia de dados ou aparelho fraco): sem desfoques, sombras pesadas e animações contínuas. */
+.leve .topo, .leve .veu, .leve .modal, .leve .busca, .leve .card__ver { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.leve .topo { background: var(--fundo); }
+.leve .topo.rolou { background: var(--superficie); }
+.leve .hero__slide.ativo img { animation: none; transform: none; }
+.leve .hero__slide { transition-duration: .3s; }
+.leve .esqueleto { animation: none; background: #e9e9ec; }
+.leve .manifesto__icone .i, .leve .gaveta__vazio-icone, .leve .info__ultimas, .leve .vazio__codigo { animation: none; }
+.leve .revelar { opacity: 1; transform: none; transition: none; }
+.leve .card__foto2 { display: none; }
+.leve .card:hover .card__foto img, .leve .galeria__foto:hover img { transform: none; }
+.leve .gaveta, .leve .menu-movel { box-shadow: none; }

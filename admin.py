@@ -187,10 +187,10 @@ def _ler_formulario():
             img.verify()
             arquivo.stream.seek(0)
             img = Image.open(arquivo.stream).convert("RGB")
-            img.thumbnail((1400, 1400))
+            img.thumbnail((1200, 1200))
             saida = io.BytesIO()
-            img.save(saida, "JPEG", quality=85, optimize=True, progressive=True)
-            imagens.append("/imagem/" + mongo.salvar_imagem(saida.getvalue(), arquivo.filename[:80], "image/jpeg"))
+            img.save(saida, "WEBP", quality=80, method=4)  # WebP: bem mais leve que JPEG
+            imagens.append("/imagem/" + mongo.salvar_imagem(saida.getvalue(), arquivo.filename[:80], "image/webp"))
         except (UnidentifiedImageError, OSError):
             erros["imagens"] = f"“{arquivo.filename}” não é uma imagem válida."
     if not imagens and "imagens" not in erros:

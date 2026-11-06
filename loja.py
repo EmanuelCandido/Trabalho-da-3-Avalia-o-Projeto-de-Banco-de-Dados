@@ -1,10 +1,10 @@
 """Módulo do cliente (público): catálogo, produto, carrinho e finalização pelo WhatsApp."""
 import json
 
-from flask import Blueprint, Response, abort, jsonify, render_template, request
+from flask import Blueprint, Response, abort, jsonify, render_template, request, session
 
 from bancos import mongo, redis_store, supabase
-from utils import (brl, config_loja, link_whatsapp, mensagem_whatsapp, montar_carrinho, visitante)
+from utils import (brl, config_loja, link_whatsapp, mensagem_whatsapp, miniatura, montar_carrinho, visitante)
 
 bp = Blueprint("loja", __name__)
 
@@ -30,8 +30,10 @@ def _inteiro(valor, padrao=0):
 
 
 def _vistos(ignorar=None):
+    if not session.get("vid"):  # visitante novo: ainda não viu nada
+        return []
     try:
-        return mongo.por_ids(redis_store.vistos(visitante(), ignorar=ignorar, limite=8))
+        return mongo.por_ids(redis_store.vistos(session["vid"], ignorar=ignorar, limite=8))
     except Exception:
         return []
 
@@ -99,10 +101,12 @@ def produto(slug):
     if not p:
         abort(404)
     try:
-        redis_store.registrar_visto(visitante(), p["id"])
+        # Registra a visita e já traz a lista de vistos no mesmo comando ao Redis.
+        ids = redis_store.registrar_visto(visitante(), p["id"], limite=8)
+        vistos = mongo.por_ids(ids)
     except Exception:
-        pass
-    return render_template("loja/produto.html", p=p, vistos=_vistos(ignorar=p["id"]))
+        vistos = []
+    return render_template("loja/produto.html", p=p, vistos=vistos)
 
 
 @bp.get("/sobre")
@@ -240,7 +244,7 @@ def api_busca():
     q = (request.args.get("q") or "").strip()[:80]
     itens = redis_store.lembrar(f"sugestoes:{q.lower()}", lambda: mongo.sugestoes(q)) if len(q) >= 2 else []
     return jsonify(itens=[{"nome": i["nome"], "slug": i["slug"], "preco": brl(i["preco_final"]),
-                           "imagem": i["imagens"][0] if i["imagens"] else "", "categoria": i["categoria"]}
+                           "imagem": miniatura(i["imagens"][0]) if i["imagens"] else "", "categoria": i["categoria"]}
                           for i in itens])
 
 

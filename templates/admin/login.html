@@ -8,14 +8,22 @@
   <title>Entrar — Painel NOMA</title>
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap"></noscript>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ versao_estatico }}">
+  <script>
+    (function () {
+      var n = navigator, c = n.connection || {};
+      if (c.saveData || /(^|-)2g$|^3g$/.test(c.effectiveType || "") || (n.deviceMemory && n.deviceMemory <= 2) ||
+          (n.hardwareConcurrency && n.hardwareConcurrency <= 2)) document.documentElement.classList.add("leve");
+    })();
+  </script>
 </head>
 <body class="login-pagina">
   {% include "_icones.html" %}
   <div class="login">
     <section class="login__foto" aria-hidden="true">
-      <img src="{{ url_for('static', filename='img/admin-login.jpg') }}" alt="">
+      <img src="{{ url_for('static', filename='img/admin-login.webp') }}" fetchpriority="high" alt="">
       <div class="login__frase">
         <span class="login__logo">NOMA</span>
         <p>Menos excessos.<br>Mais possibilidades.</p>

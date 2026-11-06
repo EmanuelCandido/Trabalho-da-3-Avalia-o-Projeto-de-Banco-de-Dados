@@ -14,10 +14,11 @@
 <article class="card revelar {{ 'card--compacto' if compacto }}" style="--atraso: {{ (i % 4) * 70 }}ms">
   <a class="card__link" href="{{ url_for('loja.produto', slug=p.slug) }}">
     <div class="card__foto esqueleto">
-      <img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}"
+      {% set foto = p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') %}
+      <img src="{{ miniatura(foto) }}" srcset="{{ srcset(foto) }}" sizes="(max-width: 640px) 48vw, (max-width: 1080px) 32vw, 24vw" width="480" height="540"
            alt="{{ p.nome }}" loading="lazy" decoding="async" onload="this.parentNode.classList.add('carregou')">
       {% if p.imagens|length > 1 %}
-      <img class="card__foto2" src="{{ p.imagens[1] }}" alt="" loading="lazy" decoding="async" aria-hidden="true">
+      <img class="card__foto2" src="{{ miniatura(p.imagens[1]) }}" srcset="{{ srcset(p.imagens[1]) }}" sizes="(max-width: 640px) 48vw, (max-width: 1080px) 32vw, 24vw" alt="" loading="lazy" decoding="async" aria-hidden="true">
       {% endif %}
       <div class="card__selos">
         {% if p.estoque <= 0 %}<span class="selo selo--esgotado">Esgotado</span>

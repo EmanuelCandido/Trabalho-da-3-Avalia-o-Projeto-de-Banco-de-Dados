@@ -33,7 +33,7 @@
       {% set topo = mais_vistos[0].views %}
       {% for p in mais_vistos %}
       <li>
-        <img src="{{ p.imagens[0] if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="">
+        <img loading="lazy" src="{{ miniatura(p.imagens[0]) if p.imagens else url_for('static', filename='img/sem-foto.svg') }}" alt="">
         <div><a href="{{ url_for('loja.produto', slug=p.slug) }}" target="_blank" rel="noopener">{{ p.nome }}</a>
           <span class="barrinha"><i style="--pct: {{ (p.views / topo * 100)|round }}%"></i></span></div>
         <b>{{ p.views }}</b>
