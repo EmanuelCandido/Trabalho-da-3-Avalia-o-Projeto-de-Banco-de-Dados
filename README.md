@@ -76,6 +76,20 @@ O painel fica em **http://127.0.0.1:5000/admin** (ou no ícone de pessoa no topo
 
 > **Sem o Supabase Auth configurado** (sem `SUPABASE_URL`/`SUPABASE_ANON_KEY`), o login usa um modo local de desenvolvimento: a senha é conferida no próprio PostgreSQL com `pgcrypto`. O dashboard avisa quando isso acontece.
 
+## Publicação na Vercel
+
+Versão online: **https://noma-demo-six.vercel.app** (painel em `/admin`, acessado só pelo link).
+
+O `vercel.json` publica o Flask como função Python (`@vercel/python`) e o `.vercelignore` deixa de fora `.env`, `.venv`, `docs/` e `scripts/`.
+As variáveis do `.env` (menos `ADMIN_*`) ficam em *Project Settings → Environment Variables* na Vercel, com `SESSION_COOKIE_SECURE=1`.
+
+```bash
+npx vercel deploy --prod
+```
+
+Observações: use a `DATABASE_URL` do pooler do Supabase (porta 6543, sem `?pgbouncer=true`) e libere `0.0.0.0/0` no
+*Network Access* do MongoDB Atlas. A Vercel aceita envios de até 4,5 MB por requisição, então fotos maiores devem ser reduzidas antes do upload.
+
 ## Desempenho (aparelhos fracos e redes lentas)
 
 | Medida (página inicial) | Antes | Depois |

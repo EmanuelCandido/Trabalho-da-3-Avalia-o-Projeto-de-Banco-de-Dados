@@ -91,7 +91,7 @@ create table if not exists public.configuracoes (
 
 insert into public.configuracoes (chave, valor) values
     ('loja_nome', 'NOMA'),
-    ('whatsapp_numero', '5583999999999'),
+    ('whatsapp_numero', ''),  -- vazio = usa WHATSAPP_NUMERO do .env
     ('faixa_promocional', '10% OFF EXTRA NO PIX'),
     ('faixa_termina_em', ''),  -- vazio: a contagem recomeça todo dia à meia-noite
     ('faixa_ativa', '1'),

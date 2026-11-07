@@ -54,7 +54,6 @@
       </nav>
       <div class="topo__acoes">
         <button class="botao-icone" type="button" aria-label="Buscar" data-abrir-busca>{{ icone('busca') }}</button>
-        <a class="botao-icone" href="{{ url_for('admin.login') }}" aria-label="Área do administrador" title="Área do administrador">{{ icone('usuario') }}</a>
         <button class="carrinho-btn" type="button" data-abrir-carrinho aria-label="Abrir carrinho">
           {{ icone('sacola') }}<span class="carrinho-btn__txt">Carrinho</span>
           <span class="contador {{ 'tem' if qtd_carrinho }}" data-contador>{{ qtd_carrinho }}</span>
@@ -76,7 +75,6 @@
     {% endfor %}
     <div class="menu-movel__pe">
       <button class="botao botao--contorno" type="button" data-abrir-busca>{{ icone('busca') }} Buscar</button>
-      <a class="botao" href="{{ url_for('admin.login') }}">{{ icone('usuario') }} Área do administrador</a>
     </div>
   </nav>
 

@@ -4,6 +4,12 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const CSRF = $('meta[name="csrf-token"]')?.content || "";
+  // Imagens protegidas: bloqueia arrastar, copiar e o menu de clique direito / segurar sobre imagens
+  const eImagem = (e) => e.target instanceof Element && e.target.closest("img, picture, video");
+  document.addEventListener("dragstart", (e) => { if (eImagem(e)) e.preventDefault(); }, true);
+  document.addEventListener("contextmenu", (e) => { if (eImagem(e)) e.preventDefault(); }, true);
+  document.addEventListener("copy", (e) => { if (window.getSelection().toString() === "" || eImagem(e)) e.preventDefault(); }, true);
+  document.addEventListener("selectstart", (e) => { if (eImagem(e)) e.preventDefault(); }, true);
   const leve = document.documentElement.classList.contains("leve");     // aparelho fraco ou rede lenta
   const poucosDados = document.documentElement.classList.contains("dados");  // 2G ou economia de dados
   const reduzir = leve || matchMedia("(prefers-reduced-motion: reduce)").matches;
