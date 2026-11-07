@@ -37,7 +37,7 @@
         <form class="compra" data-compra novalidate>
           {% if p.cores %}
           <fieldset class="opcoes" data-grupo="cor">
-            <legend>Cor: <b data-cor-nome>{{ p.cores[0].nome }}</b></legend>
+            <legend>Cor<b data-cor-nome>{{ p.cores[0].nome }}</b></legend>
             <div class="opcoes__lista">
               {% for c in p.cores %}
               <label class="cor" title="{{ c.nome }}">
@@ -51,7 +51,7 @@
 
           {% if tamanhos %}
           <fieldset class="opcoes" data-grupo="tamanho">
-            <legend>Tamanho{% if not esgotado %}: <b data-tam-nome>escolha</b>{% endif %}</legend>
+            <legend>Tamanho{% if not esgotado %}<b data-tam-nome></b>{% endif %}</legend>
             <div class="opcoes__lista">
               {% for t in tamanhos %}
               <label class="tam {{ 'tam--off' if esgotado }}">
@@ -63,15 +63,15 @@
             <p class="opcoes__aviso" data-aviso-tamanho hidden>{{ icone('alerta') }} Escolha um tamanho para continuar.</p>
           </fieldset>
           <div class="duvida">
-            <p>{{ icone('ajuda') }} Ficou com dúvidas sobre o seu tamanho?</p>
-            <button class="botao botao--contorno botao--mini" type="button" data-abrir-modal="medidas">{{ icone('regua') }} Guia de medidas</button>
+            <p>{{ icone('ajuda-cheio') }} Ficou com dúvidas sobre o seu tamanho?</p>
+            <button class="duvida__botao" type="button" data-abrir-modal="medidas">{{ icone('fita') }} Guia de medidas</button>
           </div>
           {% endif %}
 
           <fieldset class="opcoes">
             <legend>Quantidade</legend>
             <div class="qtd" data-qtd>
-              <button type="button" class="qtd__btn" data-menos aria-label="Diminuir" {{ 'disabled' if esgotado }}>{{ icone('menos') }}</button>
+              <button type="button" class="qtd__btn qtd__btn--minimo" data-menos aria-label="Diminuir" {{ 'disabled' if esgotado }}>{{ icone('menos') }}</button>
               <output data-valor>1</output>
               <button type="button" class="qtd__btn qtd__btn--cheio" data-mais aria-label="Aumentar" {{ 'disabled' if esgotado }}>{{ icone('mais') }}</button>
             </div>

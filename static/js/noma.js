@@ -396,6 +396,7 @@
     let qtd = 1;
     const mudarQtd = (n) => {
       qtd = Math.max(1, Math.min(max, Math.min(20, n)));
+      $("[data-qtd] [data-menos]", pagProduto)?.classList.toggle("qtd__btn--minimo", qtd <= 1);
       qtdEl.textContent = qtd; qtdEl.classList.remove("mudou"); void qtdEl.offsetWidth; qtdEl.classList.add("mudou");
     };
     $("[data-qtd] [data-menos]", pagProduto)?.addEventListener("click", () => mudarQtd(qtd - 1));

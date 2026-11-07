@@ -296,8 +296,13 @@ p { margin: 0; }
 @keyframes piscar { 50% { opacity: .55; } }
 .compra { display: grid; gap: 18px; margin-top: 16px; }
 .opcoes { border: 0; padding: 0; margin: 0; min-width: 0; }
-.opcoes legend { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--suave); margin-bottom: 8px; padding: 0; }
-.opcoes legend b { color: var(--texto); font-weight: 600; }
+/* rótulos como no Figma: escuros, espaçados e seguidos de uma linha fina */
+.opcoes legend { float: left; width: 100%; display: flex; align-items: center; gap: 14px; font-size: 12px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--texto); margin-bottom: 12px; padding: 0; }
+.opcoes legend + * { clear: both; }
+.opcoes legend::after { content: ""; flex: 1; height: 1px; background: var(--linha); }
+.opcoes legend b { font-weight: inherit; margin-left: -14px; }
+.opcoes legend b:not(:empty)::before { content: ": "; }
 .opcoes__lista { display: flex; gap: 8px; flex-wrap: wrap; }
 .opcoes__aviso { display: flex; gap: 6px; align-items: center; color: var(--vermelho); font-size: 12px; margin-top: 8px; animation: aparecer .3s var(--mola); }
 .opcoes__aviso .i { width: 15px; height: 15px; }
@@ -317,10 +322,15 @@ p { margin: 0; }
 @keyframes escolher { 0% { transform: scale(.88); } 100% { transform: scale(1); } }
 .tam--off span { color: var(--apagado); cursor: not-allowed; position: relative; overflow: hidden; background: transparent; }
 .tam--off span::after { content: ""; position: absolute; left: -10%; right: -10%; top: 50%; height: 1px; background: var(--linha-forte); transform: rotate(-24deg); }
-.duvida { border: 1px solid var(--linha); border-radius: 10px; padding: 12px; display: grid; gap: 10px; background: var(--superficie); }
-.duvida p { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--suave); }
-.duvida p .i { width: 16px; height: 16px; }
-.duvida .botao { width: 100%; }
+.duvida { border: 1px solid var(--linha); border-radius: 12px; padding: 22px 18px 18px; display: grid; gap: 14px; background: transparent; }
+.duvida p { display: flex; gap: 8px; align-items: center; font-size: 13px; color: #4a4a4f; letter-spacing: .01em; }
+.duvida p .i { width: 17px; height: 17px; color: #3a3a3e; }
+.duvida__botao { width: 100%; min-height: 30px; padding: 6px 12px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  border: 1px solid var(--linha-forte); border-radius: 8px; background: transparent; font-size: 13px; color: var(--texto);
+  transition: background .2s, border-color .2s, transform .2s var(--mola); }
+.duvida__botao:hover { background: var(--superficie); border-color: var(--texto); }
+.duvida__botao:active { transform: scale(.98); }
+.duvida__botao .i { width: 18px; height: 18px; stroke-width: 1.5; }
 .qtd { display: inline-flex; align-items: center; gap: 14px; }
 .qtd__btn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--linha-forte); background: var(--superficie); transition: transform .2s var(--mola), background .2s; }
 .qtd__btn:hover:not(:disabled) { background: var(--fundo); }
@@ -331,6 +341,12 @@ p { margin: 0; }
 .qtd__btn .i { width: 16px; height: 16px; }
 .qtd output { min-width: 18px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; display: inline-block; }
 .qtd output.mudou { animation: mudou .3s var(--mola); }
+/* quantidade da página do produto: pílula com borda, como no Figma */
+.compra .qtd { gap: 22px; padding: 5px; border: 1px solid var(--linha-forte); border-radius: 999px; }
+.compra .qtd__btn { width: 44px; height: 44px; }
+.compra .qtd__btn .i { width: 18px; height: 18px; stroke-width: 2.2; }
+.compra .qtd output { font-size: 18px; font-weight: 500; }
+.qtd__btn--minimo { background: var(--fundo); border-color: var(--linha); color: #b4b4b8; }
 @keyframes mudou { 0% { transform: translateY(-50%); opacity: 0; } 100% { transform: none; opacity: 1; } }
 .botao--comprar { height: 50px; }
 .botao__ok { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--verde-whats); transform: translateY(100%); transition: transform .4s var(--suavizar); }
