@@ -690,7 +690,8 @@ p { margin: 0; }
 
 /* ===================================================================== desempenho
    Partes longe da primeira tela só são desenhadas quando chegam perto (economiza CPU em aparelhos fracos). */
-.rodape, .avaliacoes, .vistos { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+.rodape, .avaliacoes { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+/* .vistos fica de fora: o content-visibility recorta o que sai da caixa e cortava as setas do trilho */
 .parado .hero__pontos button.ativo i { animation: none; transform: none; }
 
 /* Telas de toque não têm "hover": a segunda foto do card nem é baixada (imagem lazy + display none). */
