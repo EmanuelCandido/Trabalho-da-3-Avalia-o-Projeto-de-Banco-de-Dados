@@ -48,6 +48,12 @@ p { margin: 0; }
 
 .i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
+/* emblema: ícone de destaque dos cards (neutro como o resto da loja; inverte para preto no hover) */
+.emblema { width: 44px; height: 44px; border-radius: 12px; background: var(--fundo); color: var(--texto); display: inline-grid; place-items: center; flex: none; transition: background .3s var(--suavizar), color .3s var(--suavizar), transform .35s var(--mola); }
+.emblema .i { width: 22px; height: 22px; stroke-width: 1.6; }
+:is(.valores article, .contato, .manifesto):hover .emblema { background: var(--preto); color: #fff; transform: rotate(-6deg); }
+.contato:hover .emblema.emblema--whats { background: var(--verde-whats); }
+
 /* ------------------------------------------------ faixa promocional */
 .faixa {
   background: var(--preto); color: #f2f2f2; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
@@ -189,9 +195,8 @@ p { margin: 0; }
 
 /* manifesto (Os queridinhos) */
 .manifesto { background: var(--superficie); border-radius: var(--raio-g); padding: 26px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 100%; box-shadow: var(--sombra); }
-.manifesto__icone { color: var(--azul); }
-.manifesto__icone .i { width: 30px; height: 30px; stroke-width: 1.5; animation: flutuar 4s ease-in-out infinite; }
-@keyframes flutuar { 50% { transform: translateY(-4px) rotate(-4deg); } }
+.manifesto__icone .i { animation: flutuar 4s ease-in-out infinite; }
+@keyframes flutuar { 50% { transform: translateY(-2px); } }
 .manifesto h3 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .manifesto h3 span { color: var(--suave); font-weight: 500; }
 .manifesto p { color: var(--suave); font-size: 14px; }
@@ -580,12 +585,11 @@ p { margin: 0; }
 .valores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 56px; }
 .valores article, .contato { background: var(--superficie); border-radius: var(--raio-g); padding: 24px; box-shadow: var(--sombra); display: grid; gap: 8px; transition: transform .3s var(--suavizar), box-shadow .3s; }
 .valores article:hover, .contato:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgb(0 0 0 / .08); }
-.valores .i { width: 26px; height: 26px; color: var(--azul); }
+.valores .emblema { margin-bottom: 8px; }
 .valores h3 { font-size: 17px; }
 .valores p { color: var(--suave); font-size: 14px; }
 .contatos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .contato { grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }
-.contato > .i:first-child { width: 28px; height: 28px; color: var(--azul); }
 .contato h3 { font-size: 16px; }
 .contato p { font-size: 13px; color: var(--suave); }
 .contato > .i:last-child { transition: transform .25s; }

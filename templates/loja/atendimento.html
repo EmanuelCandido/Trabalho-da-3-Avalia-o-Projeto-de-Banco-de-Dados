@@ -1,5 +1,5 @@
 {% extends "loja/base.html" %}
-{% from "_macros.html" import icone %}
+{% from "_macros.html" import icone, emblema %}
 {% block titulo %}Atendimento — NOMA{% endblock %}
 {% block conteudo %}
 <div class="pagina institucional">
@@ -8,11 +8,11 @@
   </header>
   <div class="contatos">
     <a class="contato revelar" href="https://wa.me/{{ loja.whatsapp_numero }}?text={{ 'Olá, NOMA! Preciso de ajuda.'|urlencode }}" target="_blank" rel="noopener">
-      {{ icone('whatsapp') }}<div><h3>WhatsApp</h3><p>Resposta em poucos minutos</p></div>{{ icone('seta') }}</a>
+      {{ emblema('whatsapp', 'emblema--whats') }}<div><h3>WhatsApp</h3><p>Resposta em poucos minutos</p></div>{{ icone('seta') }}</a>
     <a class="contato revelar" style="--atraso:80ms" href="mailto:ola@noma.example">
-      {{ icone('email') }}<div><h3>E-mail</h3><p>ola@noma.example</p></div>{{ icone('seta') }}</a>
+      {{ emblema('email') }}<div><h3>E-mail</h3><p>ola@noma.example</p></div>{{ icone('seta') }}</a>
     <a class="contato revelar" style="--atraso:160ms" href="{{ url_for('loja.guia') }}">
-      {{ icone('regua') }}<div><h3>Guia de tamanhos</h3><p>Encontre o caimento ideal</p></div>{{ icone('seta') }}</a>
+      {{ emblema('regua') }}<div><h3>Guia de tamanhos</h3><p>Encontre o caimento ideal</p></div>{{ icone('seta') }}</a>
   </div>
 
   <h2 class="secao__titulo secao__titulo--esq revelar" id="perguntas">Perguntas frequentes</h2>

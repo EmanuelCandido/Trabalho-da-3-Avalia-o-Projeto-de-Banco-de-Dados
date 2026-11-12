@@ -2,6 +2,11 @@
 <svg class="i {{ classe }}" aria-hidden="true"><use href="#i-{{ nome }}"/></svg>
 {%- endmacro %}
 
+{# Ícone de destaque: quadrado cinza claro com o ícone em preto; inverte no hover do card #}
+{% macro emblema(nome, classe='') -%}
+<span class="emblema {{ classe }}" aria-hidden="true"><svg class="i"><use href="#i-{{ nome }}"/></svg></span>
+{%- endmacro %}
+
 {% macro estrelas(nota, classe='') -%}
 <span class="estrelas {{ classe }}" role="img" aria-label="{{ nota }} de 5 estrelas">
   {%- for n in range(1, 6) -%}

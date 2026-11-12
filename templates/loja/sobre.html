@@ -1,5 +1,5 @@
 {% extends "loja/base.html" %}
-{% from "_macros.html" import icone %}
+{% from "_macros.html" import emblema %}
 {% block titulo %}Sobre a NOMA{% endblock %}
 {% block conteudo %}
 <div class="pagina institucional">
@@ -18,9 +18,9 @@
     <div class="sobre__foto revelar esqueleto"><img src="{{ url_for('static', filename='img/admin-login.webp') }}" loading="lazy" decoding="async" alt="Arara com roupas em tons neutros no ateliê" onload="this.parentNode.classList.add('carregou')"></div>
   </section>
   <section class="valores">
-    <article class="revelar">{{ icone('folha') }}<h3>Tecidos naturais</h3><p>Algodão, linho e couro de origem rastreada.</p></article>
-    <article class="revelar" style="--atraso:80ms">{{ icone('camiseta') }}<h3>Feito para durar</h3><p>Costuras reforçadas e modelagens que não saem de moda.</p></article>
-    <article class="revelar" style="--atraso:160ms">{{ icone('troca') }}<h3>Troca sem drama</h3><p>Primeira troca grátis em até 30 dias.</p></article>
+    <article class="revelar">{{ emblema('folha') }}<h3>Tecidos naturais</h3><p>Algodão, linho e couro de origem rastreada.</p></article>
+    <article class="revelar" style="--atraso:80ms">{{ emblema('camiseta') }}<h3>Feito para durar</h3><p>Costuras reforçadas e modelagens que não saem de moda.</p></article>
+    <article class="revelar" style="--atraso:160ms">{{ emblema('troca') }}<h3>Troca sem drama</h3><p>Primeira troca grátis em até 30 dias.</p></article>
   </section>
 </div>
 {% endblock %}

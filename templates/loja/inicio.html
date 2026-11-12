@@ -1,5 +1,5 @@
 {% extends "loja/base.html" %}
-{% from "_macros.html" import icone, card %}
+{% from "_macros.html" import icone, emblema, card %}
 {% block classe_body %}pagina-inicio{% endblock %}
 {% block cabeca %}
   {% if banners %}{% set b0 = banners[0] %}
@@ -59,7 +59,7 @@
   <h2 class="secao__titulo revelar">Os queridinhos</h2>
   <div class="grade grade--queridinhos">
     <aside class="manifesto revelar">
-      <span class="manifesto__icone">{{ icone('camiseta') }}</span>
+      {{ emblema('camiseta', 'manifesto__icone') }}
       <h3>Menos excessos.<br><span>Mais possibilidades.</span></h3>
       <p>Roupas e acessórios para combinar com a vida que acontece.</p>
       <p class="manifesto__pe">Na dúvida sobre o caimento?<br>Encontre as medidas para escolher do seu jeito.</p>
