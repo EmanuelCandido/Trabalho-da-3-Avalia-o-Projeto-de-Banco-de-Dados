@@ -16,6 +16,16 @@
   const brl = (v) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0).replace(/ /g, " ");
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const icone = (n) => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+  // Esqueletos: formas cinza com brilho no lugar do conteúdo enquanto ele chega do servidor
+  const esqCards = (n) => Array.from({ length: n }, (_, i) => `<article class="card card--esqueleto" aria-hidden="true" style="--i:${i % 4}">
+      <div class="card__foto esqueleto"></div><span class="esq esq--nome esqueleto"></span><span class="esq esq--nome2 esqueleto"></span>
+      <span class="esq esq--curta esqueleto"></span><span class="esq esq--preco esqueleto"></span></article>`).join("");
+  const esqSugestoes = (n) => Array.from({ length: n }, () => `<div class="sugestao sugestao--esqueleto" aria-hidden="true">
+      <span class="esq esq--foto esqueleto"></span><span><span class="esq esq--nome esqueleto"></span><span class="esq esq--curta esqueleto"></span></span>
+      <span class="esq esq--preco esqueleto"></span></div>`).join("");
+  const esqItens = (n) => Array.from({ length: n }, () => `<div class="item item--esqueleto" aria-hidden="true">
+      <span class="item__foto"><span class="esq esq--foto esqueleto"></span></span><div><span class="esq esq--nome esqueleto"></span><span class="esq esq--curta esqueleto"></span>
+      <span class="esq esq--preco esqueleto"></span><span class="esq esq--qtd esqueleto"></span></div><span></span></div>`).join("");
 
   async function api(url, { metodo = "GET", dados } = {}) {
     const resp = await fetch(url, {
@@ -259,8 +269,18 @@
   $$("[data-abrir-carrinho]").forEach((b) => b.addEventListener("click", async () => { abrirCarrinho(); await carregarCarrinho(); }));
   $$("[data-fechar-carrinho]", gaveta).forEach((b) => b.addEventListener("click", fecharCarrinho));
 
+  let carrinhoCarregado = false;
   async function carregarCarrinho() {
-    try { desenhar(await api("/api/carrinho"), { entrar: true }); } catch (err) { toast(err.message, "erro"); }
+    const lista = $("[data-itens]", gaveta);
+    // Primeira abertura: mostra itens-esqueleto (um por item do contador, até 4) enquanto a resposta não chega
+    if (!carrinhoCarregado && lista && !$(".item", lista)) {
+      const qtd = Math.min(4, Math.max(1, +(contador?.textContent || 0)));
+      $("[data-vazio]", gaveta).hidden = true; $("[data-rodape]", gaveta).hidden = true; lista.hidden = false;
+      lista.setAttribute("aria-busy", "true"); lista.innerHTML = esqItens(qtd);
+    }
+    try { desenhar(await api("/api/carrinho"), { entrar: true }); carrinhoCarregado = true; }
+    catch (err) { $$(".item--esqueleto", lista).forEach((el) => el.remove()); $("[data-rodape]", gaveta).hidden = false; toast(err.message, "erro"); }
+    finally { lista?.removeAttribute("aria-busy"); }
   }
 
   function animarNumero(el, de, para) {
@@ -574,6 +594,8 @@
     if (q.length < 2) { resultados.innerHTML = dicaInicial; return; }
     buscaTimer = setTimeout(async () => {
       ultimaBusca = q;
+      if (!$(".sugestao:not(.sugestao--esqueleto)", resultados)) resultados.innerHTML = esqSugestoes(3);
+      resultados.setAttribute("aria-busy", "true");
       try {
         const r = await api(`/api/busca?q=${encodeURIComponent(q)}`);
         if (q !== ultimaBusca) return;
@@ -582,7 +604,8 @@
           ? r.itens.map((it, i) => `<a class="sugestao" style="--i:${i}" href="/produto/${esc(it.slug)}"><img src="${esc(it.imagem)}" alt=""><span>${marcar(it.nome, q)}<small>${esc(it.categoria)}</small></span><b>${esc(it.preco)}</b></a>`).join("")
             + `<a class="sugestao__ver" href="/busca?q=${encodeURIComponent(q)}">Ver todos os resultados ${icone("seta")}</a>`
           : `<p class="busca__dica">Nada encontrado para “${esc(q)}”. Tente “linho”, “camiseta” ou “bolsa”.</p>`;
-      } catch (err) { resultados.innerHTML = `<p class="busca__dica">${esc(err.message)}</p>`; }
+      } catch (err) { if (q === ultimaBusca) resultados.innerHTML = `<p class="busca__dica">${esc(err.message)}</p>`; }
+      finally { if (q === ultimaBusca) resultados.removeAttribute("aria-busy"); }
     }, 200);
   });
   entrada?.addEventListener("keydown", (e) => {
@@ -605,7 +628,12 @@
     });
     async function navegar(url, empilhar = true) {
       const lista = $("[data-lista]");
-      lista.classList.add("trocando");
+      lista.classList.add("trocando"); lista.setAttribute("aria-busy", "true");
+      // Só troca a grade por esqueletos se a resposta demorar (evita piscar quando ela é rápida)
+      const grade = $("[data-grade]", lista);
+      const esqTimer = grade && setTimeout(() => {
+        grade.innerHTML = esqCards(Math.min(8, Math.max(4, grade.children.length)));
+      }, 120);
       try {
         const html = await (await fetch(url, { headers: { "X-Requested-With": "fetch" } })).text();
         const nova = new DOMParser().parseFromString(html, "text/html").querySelector("[data-lista]");
@@ -614,6 +642,7 @@
         if (empilhar) history.pushState({}, "", url);
         revelar(nova); ligarListagem();
       } catch { location.href = url; }
+      finally { clearTimeout(esqTimer); }
     }
     function ligarListagem() {
       $$("[data-navegar]").forEach((a) => a.onclick = (e) => { e.preventDefault(); navegar(a.href); });
@@ -621,6 +650,9 @@
       const mais = $("[data-ver-mais]");
       if (mais) mais.onclick = async () => {
         mais.classList.add("carregando");
+        const tmpEsq = document.createElement("div");
+        tmpEsq.innerHTML = esqCards(4);
+        const esqueletos = [...tmpEsq.children]; $("[data-grade]").append(...esqueletos);
         const pagina = +mais.dataset.pagina + 1;
         const url = new URL(mais.dataset.url, location.origin);
         url.searchParams.set("pagina", pagina); url.searchParams.set("parcial", "1");
@@ -632,6 +664,7 @@
           mais.dataset.pagina = pagina;
           if (!r.tem_mais) mais.parentNode.remove();
         } catch { toast("Não foi possível carregar mais produtos.", "erro"); }
+        esqueletos.forEach((el) => el.remove());
         mais.classList.remove("carregando");
       };
     }

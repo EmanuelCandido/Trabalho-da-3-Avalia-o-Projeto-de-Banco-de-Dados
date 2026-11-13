@@ -192,6 +192,24 @@ p { margin: 0; }
 .esqueleto.carregou { animation: none; background: #e9e9ec; }
 .esqueleto.carregou img:not(.card__foto2) { opacity: 1; }
 @keyframes brilho { from { background-position: 100% 0; } to { background-position: 0 0; } }
+/* blocos de esqueleto usados enquanto o JavaScript busca conteúdo (filtros, "Ver mais", busca e carrinho) */
+.esq { display: block; height: 12px; border-radius: 4px; }
+.esq--nome { width: 82%; height: 14px; margin-top: 12px; }
+.esq--nome2 { width: 56%; height: 14px; margin-top: 6px; }
+.esq--curta { width: 34%; margin-top: 10px; }
+.esq--preco { width: 26%; height: 14px; margin-top: 8px; }
+.card--esqueleto { pointer-events: none; }
+.card--esqueleto .esqueleto { animation-delay: calc(var(--i, 0) * 90ms); }
+.sugestao--esqueleto { pointer-events: none; }
+.sugestao--esqueleto .esq--foto { width: 48px; height: 56px; border-radius: 4px; }
+.sugestao--esqueleto .esq--nome { margin-top: 0; width: min(260px, 70%); }
+.sugestao--esqueleto .esq--curta { margin-top: 6px; width: 90px; height: 10px; }
+.sugestao--esqueleto .esq--preco { margin-top: 0; width: 64px; }
+.item--esqueleto { pointer-events: none; }
+.item--esqueleto .item__foto { display: block; }
+.item--esqueleto .esq--foto { height: 100%; border-radius: 0; }
+.item--esqueleto .esq--nome { margin-top: 2px; width: 90%; }
+.item--esqueleto .esq--qtd { width: 96px; height: 26px; margin-top: 12px; border-radius: 99px; }
 
 /* manifesto (Os queridinhos) */
 .manifesto { background: var(--superficie); border-radius: var(--raio-g); padding: 26px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 100%; box-shadow: var(--sombra); }
@@ -264,7 +282,9 @@ p { margin: 0; }
 .chip .i { width: 14px; height: 14px; }
 @keyframes aparecer { from { opacity: 0; transform: scale(.7); } }
 [data-lista] { transition: opacity .25s; }
-[data-lista].trocando { opacity: .35; pointer-events: none; }
+[data-lista].trocando { pointer-events: none; }
+[data-lista].trocando > :not([data-grade]) { opacity: .45; transition: opacity .2s; }
+[data-lista].trocando [data-grade]:not(:has(.card--esqueleto)) { opacity: .35; }
 .vazio { text-align: center; padding: 64px 16px; display: grid; justify-items: center; gap: 10px; }
 .vazio__icone { width: 64px; height: 64px; border-radius: 50%; background: var(--superficie); display: grid; place-items: center; box-shadow: var(--sombra); margin-bottom: 6px; }
 .vazio__icone .i { width: 26px; height: 26px; }
