@@ -1,128 +1,138 @@
-"""Efeitos sonoros do vídeo, sintetizados (sem arquivos de terceiros), e a mixagem da trilha.
+"""Efeitos sonoros do vídeo (gravações reais de bibliotecas livres) e a mixagem da trilha.
 
 A referência não tem música nem narração: só sons de interface sincronizados com a ação e silêncio
 entre eles. Cada evento da montagem (clique, tecla, whoosh, pop, tique, sucesso) vira um som aqui.
-"""
-import wave
 
+De onde vêm os sons (créditos em sons/CREDITOS.md):
+- clique, pop e tique: Kenney, pacotes "UI Audio" e "Interface Sounds" (CC0), em sons/kenney/;
+- tecla: "Keyboard Soundpack #1", da OpenGameArt, gravado num teclado Cherry KC 1000 (CC0), em sons/teclado/;
+- whoosh e sucesso: Mixkit (licença Mixkit, livre para usar em vídeos, mas sem redistribuir os arquivos soltos).
+  Por isso eles não ficam no repositório: são baixados na primeira execução para sons/mixkit/.
+
+Cada amostra é recortada no ataque (o whoosh é alinhado pelo pico), tem o volume igualado pelo trecho
+mais forte e ganha uma pequena variação de afinação e volume a cada uso, para não soar repetida.
+"""
+import subprocess
+import urllib.request
+import wave
+from pathlib import Path
+
+import imageio_ffmpeg
 import numpy as np
-from scipy.signal import butter, sosfilt
 
 SR = 48000
 RNG = np.random.default_rng(7)
+PASTA = Path(__file__).resolve().parent / "sons"
+FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+
+MIXKIT = {  # id → nome no site
+    "whoosh": {168: "Fast sweep transition", 2608: "Fast whoosh transition", 1468: "Fast sweeping transition"},
+    "sucesso": {2867: "Confirmation tone"},
+}
+KENNEY = {
+    "pop": ["drop_002", "drop_003", "drop_004"],
+    "tique": ["tick_002", "tick_001", "select_002"],
+}
+
+# volume de cada tipo: RMS dos 50 ms mais fortes, em dBFS (igual ao equilíbrio da trilha anterior)
+NIVEIS = {"clique": -27, "tecla": -37, "whoosh": -22, "pop": -21, "tique": -27, "sucesso": -18}
+PICO_WHOOSH = 0.27  # o evento marca o início do movimento; o pico do whoosh cai 0,27 s depois
 
 
-def _env(n, ataque, queda):
-    t = np.arange(n) / SR
-    return np.minimum(1, t / max(ataque, 1e-4)) * np.exp(-t / queda)
+def _ler(caminho):
+    r = subprocess.run([FFMPEG, "-v", "error", "-i", str(caminho), "-ac", "2", "-ar", str(SR), "-f", "f32le", "-"],
+                       capture_output=True, check=True)
+    return np.frombuffer(r.stdout, np.float32).reshape(-1, 2).astype(np.float64)
 
 
-def _banda(x, f1, f2, ordem=2):
-    sos = butter(ordem, [f1 / (SR / 2), min(f2 / (SR / 2), 0.99)], btype="band", output="sos")
-    return sosfilt(sos, x)
+def _mixkit(i):
+    destino = PASTA / "mixkit" / f"{i}.mp3"
+    if not destino.exists():
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        pedido = urllib.request.Request(f"https://assets.mixkit.co/active_storage/sfx/{i}/{i}-preview.mp3",
+                                        headers={"User-Agent": "Mozilla/5.0"})
+        destino.write_bytes(urllib.request.urlopen(pedido, timeout=30).read())
+    return destino
 
 
-def _passa_baixa(x, f):
-    return sosfilt(butter(2, f / (SR / 2), output="sos"), x)
+def _recortar(x, limiar_db=-45, maximo=None):
+    m = np.abs(x).max(1)
+    idx = np.where(m > m.max() * 10 ** (limiar_db / 20))[0]
+    x = x[idx[0]:idx[-1] + 1]
+    if maximo and len(x) > maximo * SR:
+        x = x[:int(maximo * SR)]
+        x[-int(0.08 * SR):] *= np.linspace(1, 0, int(0.08 * SR))[:, None]
+    x[:16] *= np.linspace(0, 1, 16)[:, None]  # sem estalo no corte
+    return x
 
 
-def clique():
-    n = int(0.06 * SR)
-    ruido = _banda(RNG.standard_normal(n), 2500, 9000) * _env(n, 0.0004, 0.004)
-    t = np.arange(n) / SR
-    corpo = np.sin(2 * np.pi * 1900 * t) * _env(n, 0.0003, 0.007) * 0.5
-    baixo = np.sin(2 * np.pi * 180 * t) * _env(n, 0.001, 0.012) * 0.35
-    k = int(0.075 * SR)  # o "soltar" do botão, mais fraco, 75 ms depois
-    x = ruido + corpo + baixo
-    out = np.zeros(int(0.16 * SR))
-    out[:n] += x
-    out[k:k + n] += 0.45 * (ruido + corpo)[: len(out) - k]
-    return out / np.max(np.abs(out))
+def _nivelar(x, alvo_db):
+    w = int(0.05 * SR)
+    p = (x ** 2).mean(1)
+    e = np.convolve(p, np.ones(w) / w, "valid").max() if len(p) > w else p.mean()
+    return x * 10 ** ((alvo_db - 10 * np.log10(e)) / 20)
 
 
-def tecla(var):
-    rng = np.random.default_rng(100 + var)
-    n = int(0.05 * SR)
-    f = rng.uniform(1800, 3200)
-    ruido = _banda(rng.standard_normal(n), f * 0.7, f * 1.8) * _env(n, 0.0005, 0.006)
-    t = np.arange(n) / SR
-    baque = np.sin(2 * np.pi * rng.uniform(140, 220) * t) * _env(n, 0.001, 0.010) * 0.6
-    x = ruido + baque
-    return x / np.max(np.abs(x))
+def _afinar(x, fator):
+    """Muda a velocidade (e o tom) em poucos por cento, como pegar outra tecla ou outro mouse."""
+    n = int(len(x) / fator)
+    pos = np.arange(n) * fator
+    return np.stack([np.interp(pos, np.arange(len(x)), x[:, c]) for c in range(2)], 1)
 
 
-def whoosh(dur=0.55):
-    n = int(dur * SR)
-    t = np.arange(n) / SR
-    base = RNG.standard_normal(n)
-    # filtro passa-banda que varre: aplicado em blocos com centro variando
-    out = np.zeros(n)
-    blocos = 24
-    for i in range(blocos):
-        a, b = i * n // blocos, (i + 1) * n // blocos
-        u = (a + b) / 2 / n
-        centro = 300 + 1900 * np.sin(np.pi * u) ** 1.5
-        seg = _banda(base[max(0, a - 2000):b], centro * 0.5, centro * 1.6)[-(b - a):]
-        out[a:b] = seg
-    env = np.sin(np.pi * np.clip(t / dur, 0, 1)) ** 1.8
-    out *= env
-    return out / np.max(np.abs(out))
+def _banco():
+    k = PASTA / "kenney"
+    clique, solta = _recortar(_ler(k / "mouseclick1.ogg")), _recortar(_ler(k / "mouserelease1.ogg"))
+    banco = {
+        "clique": [(clique, solta)],
+        "tecla": [_nivelar(_recortar(_ler(p)), NIVEIS["tecla"]) for p in sorted((PASTA / "teclado").glob("keypress-*.wav"))],
+        "pop": [_nivelar(_recortar(_ler(k / f"{n}.ogg")), NIVEIS["pop"]) for n in KENNEY["pop"]],
+        "tique": [_nivelar(_recortar(_ler(k / f"{n}.ogg")), NIVEIS["tique"]) for n in KENNEY["tique"]],
+        "whoosh": [_nivelar(_recortar(_ler(_mixkit(i)), -40, 1.2), NIVEIS["whoosh"]) for i in MIXKIT["whoosh"]],
+        "sucesso": [_nivelar(_recortar(_ler(_mixkit(i)), -50, 1.6), NIVEIS["sucesso"]) for i in MIXKIT["sucesso"]],
+    }
+    return banco
 
 
-def pop():
-    n = int(0.16 * SR)
-    t = np.arange(n) / SR
-    f = 380 + 600 * np.exp(-t / 0.018)
-    fase = 2 * np.pi * np.cumsum(f) / SR
-    x = np.sin(fase) * _env(n, 0.001, 0.045)
-    x += 0.25 * _banda(RNG.standard_normal(n), 3000, 8000) * _env(n, 0.0003, 0.003)
-    return x / np.max(np.abs(x))
-
-
-def tique():
-    n = int(0.08 * SR)
-    t = np.arange(n) / SR
-    x = np.sin(2 * np.pi * 2600 * t) * _env(n, 0.0005, 0.012) + 0.4 * np.sin(2 * np.pi * 5200 * t) * _env(n, 0.0005, 0.006)
-    return x / np.max(np.abs(x))
-
-
-def sucesso():
-    n = int(0.9 * SR)
-    t = np.arange(n) / SR
-    x = np.zeros(n)
-    for atraso, f in [(0.0, 880.0), (0.11, 1318.5)]:
-        k = int(atraso * SR)
-        tt = t[: n - k]
-        nota = (np.sin(2 * np.pi * f * tt) + 0.3 * np.sin(2 * np.pi * 2 * f * tt)) * _env(n - k, 0.004, 0.22)
-        x[k:] += nota
-    return x / np.max(np.abs(x))
-
-
-# volume de cada tipo (dBFS de pico) — ver docs/VIDEO.md, seção 3
-NIVEIS = {"clique": -10, "tecla": -19, "whoosh": -12, "pop": -13, "tique": -21, "sucesso": -11}
+def _clique(par, rng):
+    """Apertar e soltar o botão do mouse: dois estalos reais, o de soltar 70–100 ms depois e mais fraco."""
+    aperta, solta = par
+    k = int(rng.uniform(0.07, 0.10) * SR)
+    x = np.zeros((k + len(solta), 2))
+    x[:len(aperta)] += aperta
+    x[k:] += solta * rng.uniform(0.5, 0.7)
+    return _nivelar(x, NIVEIS["clique"])
 
 
 def mixar(cues, duracao, caminho):
     n = int((duracao + 1) * SR)
     mix = np.zeros((n, 2))
-    banco = {"clique": [clique()], "tecla": [tecla(i) for i in range(8)], "whoosh": [whoosh(0.5), whoosh(0.6)],
-             "pop": [pop()], "tique": [tique()], "sucesso": [sucesso()]}
+    banco = _banco()
     for i, c in enumerate(cues):
-        variantes = banco.get(c["tipo"])
+        tipo = c["tipo"]
+        variantes = banco.get(tipo)
         if not variantes:
             continue
-        x = variantes[i % len(variantes)] if c["tipo"] != "tecla" else variantes[RNG.integers(len(variantes))]
-        ganho = 10 ** (NIVEIS[c["tipo"]] / 20) * float(c.get("vol", 1))
-        if c["tipo"] == "tecla":
-            ganho *= RNG.uniform(0.75, 1.1)
-        # leve estéreo: teclas e cliques um pouco à direita, whoosh abre
-        pan = {"tecla": 0.08, "clique": 0.05, "whoosh": 0.0}.get(c["tipo"], 0.0) + RNG.uniform(-0.05, 0.05)
-        k = int(c["t"] * SR)
+        if tipo == "clique":
+            x = _clique(variantes[0], RNG)
+        elif tipo == "tecla":
+            x = variantes[RNG.integers(len(variantes))] * RNG.uniform(0.75, 1.05)
+        else:
+            x = variantes[i % len(variantes)]
+        if tipo in ("clique", "tecla", "pop", "tique"):
+            x = _afinar(x, RNG.uniform(0.97, 1.03))
+        x = x * float(c.get("vol", 1))
+        inicio = c["t"]
+        if tipo == "whoosh":
+            pico = np.argmax(np.convolve(np.abs(x).mean(1), np.ones(480) / 480, "same")) / SR
+            inicio += PICO_WHOOSH - pico
+        k = int(inicio * SR)
+        if k < 0:
+            x, k = x[-k:], 0
         if k >= n:
             continue
         m = min(len(x), n - k)
-        mix[k:k + m, 0] += x[:m] * ganho * (1 - pan)
-        mix[k:k + m, 1] += x[:m] * ganho * (1 + pan)
+        mix[k:k + m] += x[:m]
     pico = np.max(np.abs(mix)) or 1
     limite = 10 ** (-1.5 / 20)
     if pico > limite:  # limitador simples: nunca passa de -1,5 dBFS

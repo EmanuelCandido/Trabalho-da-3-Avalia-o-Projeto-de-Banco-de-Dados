@@ -84,7 +84,7 @@ O teaser tem 18 s e telas simuladas; a entrega exige **gravação do sistema rea
 | Cursor | seta do macOS 34 px, mãozinha sobre clicáveis, clique = escala 0,82 por 120 ms |
 | Mola | sobressalto de ~6% ao aparecer (cartões, balões, ícones) |
 | Saída | 1920×1080, 60 fps, H.264 CRF 18, AAC 192 kbps |
-| Sons | picos de clique −10 dB, tecla −19 dB (com variação aleatória), whoosh −12 dB, pop −13 dB, tique −21 dB, sucesso −11 dB; limitador em −1,5 dB. Sem música |
+| Sons | gravações reais (Kenney, OpenGameArt e Mixkit); volume pelo trecho de 50 ms mais forte: clique −27 dB, tecla −37 dB (com variação aleatória), whoosh −22 dB, pop −21 dB, tique −27 dB, sucesso −18 dB; limitador em −1,5 dB. Sem música |
 
 ---
 
@@ -167,7 +167,7 @@ video/fotos.py      → gera as fotos do produto novo (recolore o tricô verde d
 video/capturar.py   → grava o sistema real com o Playwright (Chrome) e salva quadros + eventos
 video/montar.py     → monta o vídeo quadro a quadro (animações + gravações + cursor + legendas) e o áudio
 video/render/       → página HTML/CSS/JS que desenha cada quadro (o "motor" de animação)
-video/sons.py       → sintetiza os efeitos sonoros e mixa a trilha
+video/sons.py       → prepara os efeitos sonoros gravados (video/sons/) e mixa a trilha
 ```
 
 ### 5.1 Captura (`capturar.py`)
@@ -183,7 +183,11 @@ video/sons.py       → sintetiza os efeitos sonoros e mixa a trilha
 - Esperas de rede da gravação são aceleradas; digitação e cliques ficam em tempo real.
 
 ### 5.3 Áudio (`sons.py`)
-- Os efeitos são sintetizados em Python (ruído filtrado e senoides), então não há direitos autorais envolvidos.
+- Os efeitos são **gravações reais** de bibliotecas livres (créditos e licenças em [`video/sons/CREDITOS.md`](../video/sons/CREDITOS.md)):
+  - **Clique:** clique e soltura de um mouse de verdade (Kenney, CC0), o de soltar 70–100 ms depois.
+  - **Tecla:** 32 teclas gravadas num teclado Cherry KC 1000 (OpenGameArt, CC0), sorteadas a cada toque.
+  - **Pop** e **tique:** sons de interface do Kenney (CC0). **Whoosh** e **sucesso:** Mixkit, baixados na primeira execução porque a licença não deixa redistribuir os arquivos soltos.
+  - Cada uso ganha ±3% de variação de afinação e volume, para a digitação não soar repetida; o whoosh é alinhado pelo pico.
 - Cada clique, tecla, transição e aparecimento vira um evento na linha do tempo; a mixagem normaliza o volume e deixa silêncio entre os sons, como na referência.
 
 ### 5.4 Comandos

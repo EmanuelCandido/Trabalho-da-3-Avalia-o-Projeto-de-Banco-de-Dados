@@ -32,9 +32,9 @@ https://github.com/user-attachments/assets/c059524d-9ed4-4378-88c1-4e9ff67be009
 
 ### Prévia animada (5 min 30 s)
 
-Versão editada e animada da demonstração, gerada automaticamente pelo código da pasta [`video/`](video). O estilo e o roteiro estão em [docs/VIDEO.md](docs/VIDEO.md).
+Versão editada e animada da demonstração, gerada automaticamente pelo código da pasta [`video/`](video). O estilo e o roteiro estão em [docs/VIDEO.md](docs/VIDEO.md). Os efeitos sonoros são gravações reais de bibliotecas livres ([créditos](video/sons/CREDITOS.md)).
 
-https://github.com/user-attachments/assets/21d0d6dc-c198-4b52-8cfe-dd486aa8d956
+https://github.com/user-attachments/assets/2843d9fe-3254-4eec-995a-1edb0c9d8d6d
 
 ## Telas
 
