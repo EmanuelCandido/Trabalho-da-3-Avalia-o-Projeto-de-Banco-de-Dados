@@ -142,6 +142,8 @@ Tecnologias: Python 3.12, Flask 3, Jinja2, `pymongo`, `psycopg` 3, `redis-py` e 
 
 ## 8. Roteiro do vídeo (5 a 10 min)
 
+O roteiro detalhado, o estilo visual e a produção do vídeo estão em [VIDEO.md](VIDEO.md). Resumo:
+
 1. Arquitetura em 30 s: os três bancos e o papel de cada um.
 2. Login do admin (mostrar também o erro e o registro em `acessos_admin` no Supabase).
 3. Cadastro de um produto novo, com foto e atributos extras; mostrar o documento no MongoDB.
