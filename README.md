@@ -268,3 +268,8 @@ Otimizações para aparelhos fracos e redes lentas:
 - [Planejamento completo e roteiro do vídeo](docs/PLANEJAMENTO.md)
 - [Vídeo de demonstração: análise do estilo de referência, storyboard e produção automatizada](docs/VIDEO.md) (código em `video/`)
 - [Briefing de telas enviado para o design](docs/briefing/Briefing%20de%20Telas.pdf)
+
+## Grupo
+
+- Emanuel Cândido da Silva Lima
+- João Pedro Melo Xavier
