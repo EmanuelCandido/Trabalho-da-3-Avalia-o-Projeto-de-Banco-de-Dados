@@ -6,6 +6,11 @@ A **NOMA** é uma loja virtual fictícia de roupas e acessórios criada para o t
 
 **Versão online:** https://noma-demo-six.vercel.app
 
+**Painel do administrador:** https://noma-demo-six.vercel.app/admin
+
+- **E-mail:** `admin@noma.local`
+- **Senha:** `adminnoma`
+
 ![Página inicial da NOMA](docs/telas/inicio.jpg)
 
 ## Sumário
