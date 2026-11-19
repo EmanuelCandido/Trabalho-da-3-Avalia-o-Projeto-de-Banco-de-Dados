@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/c059524d-9ed4-4378-88c1-4e9ff67be009
 
 ### Prévia animada (5 min 30 s)
 
-Versão editada e animada da demonstração, gerada automaticamente pelo código da pasta [`video/`](video). O estilo e o roteiro estão em [docs/VIDEO.md](docs/VIDEO.md). Os efeitos sonoros são gravações reais de bibliotecas livres ([créditos](video/sons/CREDITOS.md)).
+Versão editada e animada da demonstração, com efeitos sonoros gravados de bibliotecas livres.
 
 https://github.com/user-attachments/assets/2843d9fe-3254-4eec-995a-1edb0c9d8d6d
 
@@ -186,7 +186,6 @@ Navegador ──► Flask (Python)
 | `database/supabase.sql` | Tabelas, função `registrar_pedido`, view `vw_resumo_vendas` e RLS |
 | `scripts/` | `setup_supabase.py` (tabelas + admin), `seed.py` (catálogo) e `otimizar_imagens.py` (WebP) |
 | `templates/`, `static/` | Telas (Jinja2), CSS e JavaScript puro (`static/js/ui.js` e `static/css/ui.css` têm os controles de formulário próprios) |
-| `video/` | Produção automatizada da prévia animada |
 
 Segurança do login: Supabase Auth, proteção CSRF, sessão nova a cada login, bloqueio por 15 min após 5 tentativas erradas (contador no Redis) e registro de cada tentativa na tabela `acessos_admin`.
 
@@ -271,7 +270,6 @@ Otimizações para aparelhos fracos e redes lentas:
 ## Documentação
 
 - [Planejamento completo e roteiro do vídeo](docs/PLANEJAMENTO.md)
-- [Vídeo de demonstração: análise do estilo de referência, storyboard e produção automatizada](docs/VIDEO.md) (código em `video/`)
 - [Briefing de telas enviado para o design](docs/briefing/Briefing%20de%20Telas.pdf)
 
 ## Grupo
