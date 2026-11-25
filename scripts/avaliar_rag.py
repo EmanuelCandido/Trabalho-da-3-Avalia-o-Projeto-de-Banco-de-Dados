@@ -18,6 +18,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
 from bancos import mongo, supabase, vetorial  # noqa: E402
+from ia import busca as ia_busca  # noqa: E402
 from config import Config  # noqa: E402
 from ia import gemini  # noqa: E402
 
@@ -46,6 +47,19 @@ def busca_texto(pergunta):
     return [d["slug"] for d in cursor]
 
 
+def pagina_busca(pergunta, vetor):
+    """Os produtos que a página /busca mostraria (o mesmo corte de ia/busca.py), sem chamar a API de novo."""
+    linhas = vetorial.buscar(vetor, qtd=20, fontes=["produto"])
+    filtros = ia_busca.extrair_filtros(pergunta)
+    corte = ia_busca._corte([float(r["similaridade"]) for r in linhas], bool(filtros))
+    if corte is None:
+        return []
+    produtos = {p["id"]: p for p in mongo.por_ids([r["referencia"] for r in linhas])}
+    return [produtos[r["referencia"]]["slug"] for r in linhas
+            if r["referencia"] in produtos and float(r["similaridade"]) >= corte
+            and not ia_busca._motivo_descarte(produtos[r["referencia"]], filtros)]
+
+
 def pct(valor, total):
     return f"{round(100 * valor / total)}%" if total else "—"
 
@@ -60,6 +74,7 @@ def main():
     supabase._pool.wait(timeout=15)
     gemini.init(Config.GEMINI_API_KEY, Config.GEMINI_MODELO, Config.GEMINI_MODELO_EMBEDDING, Config.EMBEDDING_DIM)
     limiar = Config.RAG_LIMIAR
+    ia_busca.init(Config.RAG_LIMIAR, Config.RAG_TOP_K)
 
     itens = json.loads((RAIZ / "testes" / "perguntas.json").read_text(encoding="utf-8"))
     vetores = gemini.embeddings([i["pergunta"] for i in itens], "RETRIEVAL_QUERY")
@@ -69,7 +84,8 @@ def main():
         resultados = vetorial.buscar(vetor, qtd=TOP)
         melhor = float(resultados[0]["similaridade"]) if resultados else 0.0
         if item.get("fora"):
-            fora.append({"item": item, "melhor": melhor, "topo": resultados[0]["titulo"] if resultados else ""})
+            fora.append({"item": item, "melhor": melhor, "topo": resultados[0]["titulo"] if resultados else "",
+                         "pagina": pagina_busca(item["pergunta"], vetor)})
             continue
         posicao = next((n for n, r in enumerate(resultados, start=1) if acertou(item, r)), None)
         sim_acerto = float(resultados[posicao - 1]["similaridade"]) if posicao else None
@@ -78,6 +94,7 @@ def main():
         if item.get("slugs"):
             registro["regex"] = any(s in item["slugs"] for s in busca_regex(item["pergunta"]))
             registro["texto"] = any(s in item["slugs"] for s in busca_texto(item["pergunta"]))
+            registro["pagina"] = pagina_busca(item["pergunta"], vetor)
         dentro.append(registro)
         linhas.append(registro)
 
@@ -114,6 +131,17 @@ def main():
               f"| Regex no MongoDB (busca atual do site) | {sum(r['regex'] for r in produtos)} de {len(produtos)} |",
               f"| Índice de texto do MongoDB (`$text`, palavras-chave) | {sum(r['texto'] for r in produtos)} de {len(produtos)} |",
               f"| Vetorial (pgvector + Gemini) | {sum(bool(r['posicao']) for r in produtos)} de {len(produtos)} |", ""]
+
+    mostradas = [s for r in produtos for s in r["pagina"]]
+    certas = sum(1 for r in produtos for s in r["pagina"] if s in r["item"]["slugs"])
+    saida += [f"## Página /busca ({len(produtos)} perguntas sobre produtos)\n",
+              "A página mostra o que tem o termo escrito e, depois, os produtos que se destacam da média dos candidatos "
+              f"(`ia/busca.py`, `_corte`: o melhor precisa passar de {str(ia_busca.LIMIAR_BUSCA).replace(".", ",")}).\n",
+              "| Medida | Resultado |", "|---|---|",
+              f"| Mostrou pelo menos uma peça esperada | {sum(1 for r in produtos if any(s in r['item']['slugs'] for s in r['pagina']))} de {len(produtos)} |",
+              f"| Peças mostradas por busca (média) | {len(mostradas) / len(produtos):.1f} |".replace(".", ",", 1),
+              f"| Peças mostradas que estavam na lista esperada | {certas} de {len(mostradas)} ({pct(certas, len(mostradas))}) |",
+              f"| Perguntas fora do assunto sem nenhuma peça | {sum(1 for r in fora if not r['pagina'])} de {len(fora)} |", ""]
 
     saida += ["## Limiar de similaridade\n",
               f"Limiar atual (`RAG_LIMIAR`): **{limiar:.2f}**.\n",

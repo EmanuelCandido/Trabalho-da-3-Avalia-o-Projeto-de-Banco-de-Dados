@@ -1,6 +1,6 @@
 # Avaliação da recuperação (RAG)
 
-Gerado em 25/11/2026 16:49 por `scripts/avaliar_rag.py` com 39 perguntas de `testes/perguntas.json` (33 sobre a loja e 6 fora do assunto). Modelo de embedding: `gemini-embedding-001@768`.
+Gerado em 25/11/2026 19:50 por `scripts/avaliar_rag.py` com 39 perguntas de `testes/perguntas.json` (33 sobre a loja e 6 fora do assunto). Modelo de embedding: `gemini-embedding-001@768`.
 
 ## Busca vetorial
 
@@ -29,6 +29,17 @@ Gerado em 25/11/2026 16:49 por `scripts/avaliar_rag.py` com 39 perguntas de `tes
 | Regex no MongoDB (busca atual do site) | 0 de 18 |
 | Índice de texto do MongoDB (`$text`, palavras-chave) | 17 de 18 |
 | Vetorial (pgvector + Gemini) | 18 de 18 |
+
+## Página /busca (18 perguntas sobre produtos)
+
+A página mostra o que tem o termo escrito e, depois, os produtos que se destacam da média dos candidatos (`ia/busca.py`, `_corte`: o melhor precisa passar de 0,62).
+
+| Medida | Resultado |
+|---|---|
+| Mostrou pelo menos uma peça esperada | 18 de 18 |
+| Peças mostradas por busca (média) | 2,4 |
+| Peças mostradas que estavam na lista esperada | 26 de 43 (60%) |
+| Perguntas fora do assunto sem nenhuma peça | 6 de 6 |
 
 ## Limiar de similaridade
 

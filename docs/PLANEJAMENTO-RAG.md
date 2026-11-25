@@ -444,6 +444,8 @@ Feito em 25/11 no n8n 2.49.6 (Docker): `scripts/configurar_n8n.py` prepara o `.e
 
 ## 11. Segurança, custo e privacidade
 
+Revisão de segurança do branch `rag` em 25/11 (autorização, CSRF, rotas internas, SQL e NoSQL injection, XSS no chat e no painel, upload, segredos no repositório, RLS): nenhuma vulnerabilidade alta ou média. Pontos de reforço anotados: o n8n local aceita o certificado do Supabase sem conferir e roda com `N8N_SECURE_COOKIE=false`, ambos só em `127.0.0.1`.
+
 - Chave do Gemini só no servidor (`.env` e variáveis da Vercel). Antes de cada push: `git grep -n "AIza"` (o prefixo das chaves do Google) deve voltar vazio.
 - Limite por visitante, teto diário global, pergunta de até 500 caracteres, CSRF nos POST (já existe).
 - Injeção de prompt por avaliações ou documentos enviados: contexto delimitado e numerado, regra 5 do prompt, avaliações limitadas a 600 caracteres (já é assim) e envio de documento só pelo admin.

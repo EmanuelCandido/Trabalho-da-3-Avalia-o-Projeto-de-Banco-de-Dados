@@ -106,6 +106,20 @@ def criar_app():
         # navegadores pedem /favicon.ico mesmo com o ícone SVG declarado na página
         return app.send_static_file("img/favicon.svg")
 
+    @app.get("/api/saude")
+    def saude():
+        """Chamada todo dia pelo cron da Vercel (vercel.json). Uma consulta simples ao Postgres conta como uso:
+        sem ela, o Supabase gratuito pausa o projeto depois de uma semana parado (o professor pode testar depois)."""
+        inicio = datetime.now()
+        try:
+            supabase.ping()
+        except Exception:
+            app.logger.exception("Saúde: o Postgres não respondeu")
+            return jsonify(ok=False), 503
+        resposta = jsonify(ok=True, postgres_ms=round((datetime.now() - inicio).total_seconds() * 1000))
+        resposta.headers["Cache-Control"] = "no-store"
+        return resposta
+
     @app.errorhandler(404)
     def nao_encontrado(_erro):
         if request.path.startswith("/api/"):

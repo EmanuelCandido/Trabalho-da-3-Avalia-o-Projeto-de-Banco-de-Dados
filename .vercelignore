@@ -11,3 +11,6 @@ database/
 docker-compose.yml
 *.log
 video/
+n8n/
+testes/
+DESIGN.md
