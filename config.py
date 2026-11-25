@@ -38,6 +38,7 @@ class Config:
     # Sem GEMINI_API_KEY a loja funciona como antes (sem assistente e com a busca por texto).
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODELO = os.getenv("GEMINI_MODELO", "gemini-3.5-flash-lite")
+    GEMINI_MODELO_RESERVA = os.getenv("GEMINI_MODELO_RESERVA", "gemini-flash-lite-latest,gemini-3.6-flash")
     GEMINI_MODELO_EMBEDDING = os.getenv("GEMINI_MODELO_EMBEDDING", "gemini-embedding-001")
     EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "768"))
     RAG_TOP_K = int(os.getenv("RAG_TOP_K", "6"))

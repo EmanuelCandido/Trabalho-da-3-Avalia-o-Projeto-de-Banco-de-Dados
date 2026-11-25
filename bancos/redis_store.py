@@ -199,3 +199,66 @@ def registrar_falha_login(ip):
 
 def limpar_falhas_login(ip):
     _r.delete(f"{P}login:falhas:{ip}")
+
+
+# ---------------------------------------------------------------- IA: cache de embeddings, conversa e limites
+
+TTL_EMBEDDING = 60 * 60 * 24 * 7    # 7 dias: a mesma pergunta não chama a API de novo
+TTL_CHAT = 60 * 60 * 2              # 2 horas de conversa guardada
+MAX_MENSAGENS_CHAT = 8              # 4 perguntas e 4 respostas
+JANELA_PERGUNTAS = 60 * 10          # limite de perguntas por visitante a cada 10 minutos
+
+
+def embedding_guardado(chave):
+    inicio = perf_counter()
+    valor = _r.get(f"{P}ia:emb:{chave}")
+    _log("GET", f"{P}ia:emb:{chave[:10]}…", "HIT" if valor else "MISS", inicio)
+    return json.loads(valor) if valor else None
+
+
+def guardar_embedding(chave, vetor):
+    _r.set(f"{P}ia:emb:{chave}", json.dumps([round(v, 6) for v in vetor]), ex=TTL_EMBEDDING)
+
+
+def historico_chat(visitante):
+    """Mensagens da conversa, da mais antiga para a mais nova."""
+    return [json.loads(m) for m in _r.lrange(f"{P}ia:chat:{visitante}", 0, -1)]
+
+
+def adicionar_ao_chat(visitante, *mensagens):
+    chave = f"{P}ia:chat:{visitante}"
+    inicio = perf_counter()
+    pipe = _r.pipeline()
+    for m in mensagens:
+        pipe.rpush(chave, json.dumps(m, ensure_ascii=False, default=str))
+    pipe.ltrim(chave, -MAX_MENSAGENS_CHAT, -1)
+    pipe.expire(chave, TTL_CHAT)
+    pipe.execute()
+    _log("RPUSH", chave, f"+{len(mensagens)}", inicio)
+
+
+def limpar_chat(visitante):
+    _r.delete(f"{P}ia:chat:{visitante}")
+
+
+def contar_pergunta(visitante, limite):
+    """INCR com TTL: devolve (pode_perguntar, segundos_para_liberar)."""
+    chave = f"{P}ia:limite:{visitante}"
+    pipe = _r.pipeline()
+    pipe.incr(chave)
+    pipe.ttl(chave)
+    feitas, ttl = pipe.execute()
+    if ttl is None or ttl < 0:
+        _r.expire(chave, JANELA_PERGUNTAS)
+        ttl = JANELA_PERGUNTAS
+    return feitas <= limite, ttl
+
+
+def usar_cota_do_dia(limite):
+    """Conta uma resposta gerada no dia (teto global para não estourar o plano gratuito)."""
+    chave = f"{P}ia:cota:{datetime.now(timezone.utc):%Y-%m-%d}"
+    pipe = _r.pipeline()
+    pipe.incr(chave)
+    pipe.expire(chave, 60 * 60 * 48)
+    usadas = pipe.execute()[0]
+    return usadas <= limite

@@ -171,3 +171,19 @@ def avaliar_interacao(interacao_id, visitante, nota):
     """👍 (1) ou 👎 (-1), só de quem fez a pergunta."""
     return _q("update interacoes_ia set avaliacao = %s where id = %s and visitante = %s",
               (nota, interacao_id, visitante)) == 1
+
+
+def trechos_de(referencia, embedding):
+    """Todos os trechos de uma referência (ex.: o produto aberto quando o chat começou na página dele),
+    com a similaridade em relação à pergunta."""
+    return _q(f"""select id, fonte, referencia, trecho, titulo, conteudo, metadados,
+                         (1 - (embedding operator(extensions.<=>) %s::{TIPO_VETOR}))::real as similaridade
+                    from conhecimento where referencia = %s order by fonte, trecho""",
+              (vetor_sql(embedding), referencia), todos=True)
+
+
+SQL_BUSCA = """select id, fonte, titulo,
+       1 - (embedding <=> :vetor_da_pergunta) as similaridade
+  from conhecimento
+ order by embedding <=> :vetor_da_pergunta   -- distância de cosseno (índice HNSW)
+ limit {qtd};"""

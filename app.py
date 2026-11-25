@@ -11,9 +11,12 @@ from pymongo.errors import PyMongoError
 from redis.exceptions import RedisError
 
 import admin
+import assistente
 import loja
 from bancos import mongo, redis_store, supabase
 from config import Config
+from ia import busca as ia_busca
+from ia import gemini, indexador, rag
 from utils import (banner_srcset, brl, config_loja, conferir_csrf, csrf_token, miniatura, parcelas,
                    srcset)
 
@@ -31,9 +34,16 @@ def criar_app():
     redis_store.init(app.config["REDIS_URL"], app.config["CACHE_TTL"])
     supabase.init(app.config["DATABASE_URL"], app.config["SUPABASE_URL"],
                   app.config["SUPABASE_ANON_KEY"], app.config["SUPABASE_SERVICE_ROLE_KEY"])
+    # IA: sem GEMINI_API_KEY tudo continua funcionando, só sem o assistente e sem a busca por significado.
+    gemini.init(app.config["GEMINI_API_KEY"], app.config["GEMINI_MODELO"], app.config["GEMINI_MODELO_EMBEDDING"],
+                app.config["EMBEDDING_DIM"], reserva=app.config["GEMINI_MODELO_RESERVA"])
+    ia_busca.init(app.config["RAG_LIMIAR"], app.config["RAG_TOP_K"])
+    rag.init(app.config["IA_LIMITE_DIA"])
+    indexador.init(app.config["N8N_WEBHOOK_URL"], app.config["N8N_SEGREDO"])
 
     app.register_blueprint(loja.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(assistente.bp)
     app.before_request(conferir_csrf)
 
     app.jinja_env.filters["brl"] = brl
@@ -77,7 +87,7 @@ def criar_app():
                     qtd = 0
         return {"csrf_token": csrf_token, "qtd_carrinho": qtd, "url_atual": url_atual,
                 "loja": config_loja() if not request.path.startswith("/static") else {},
-                "ano": datetime.now().year, "versao_estatico": "25"}
+                "ano": datetime.now().year, "versao_estatico": "25", "ia_ativa": gemini.ativo()}
 
     @app.after_request
     def cabecalhos(resposta):

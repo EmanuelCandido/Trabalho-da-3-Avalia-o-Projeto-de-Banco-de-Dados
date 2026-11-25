@@ -10,6 +10,7 @@ from flask import (Blueprint, flash, jsonify, redirect, render_template, request
 from PIL import Image, UnidentifiedImageError
 
 from bancos import mongo, redis_store, supabase
+from ia import gemini, indexador
 from utils import (admin_obrigatorio, config_loja, ip_cliente, ler_data_hora, ler_preco,
                    mostrar_data_hora)
 
@@ -122,6 +123,17 @@ def produtos():
                            categorias=mongo.CATEGORIAS, novo=request.args.get("novo"))
 
 
+def _indexar(produto_id):
+    """Atualiza o banco vetorial (pgvector) depois de mexer num produto: pelo n8n ou pelo próprio Python.
+    Devolve (quem indexou, texto para o aviso)."""
+    quem = indexador.agendar(produto_id)
+    if quem == "n8n":
+        return quem, " Índice do assistente atualizado pelo n8n."
+    if quem == "python":
+        return quem, " Índice do assistente atualizado."
+    return quem, (" O índice do assistente não foi atualizado agora." if gemini.ativo() else "")
+
+
 def _form_vazio():
     return {"nome": "", "descricao": "", "categoria": "Roupas", "genero": "Unissex", "preco": "",
             "preco_promocional": "", "estoque": 10, "material": "", "composicao": "", "cores": [],
@@ -218,7 +230,8 @@ def novo_produto():
         if not erros:
             produto_id = mongo.criar(dados)
             redis_store.invalidar_cache()
-            flash(f"“{dados['nome']}” cadastrado no MongoDB e já visível na loja.", "ok")
+            _, aviso_indice = _indexar(produto_id)
+            flash(f"“{dados['nome']}” cadastrado no MongoDB e já visível na loja.{aviso_indice}", "ok")
             return redirect(url_for("admin.produtos", novo=produto_id))
         flash("Confira os campos destacados.", "erro")
         return render_template("admin/form.html", p=reexibir, erros=erros, editando=False,
@@ -242,7 +255,8 @@ def editar_produto(produto_id):
                 if url.startswith("/imagem/"):
                     mongo.apagar_imagem(url.rsplit("/", 1)[-1])
             redis_store.invalidar_cache()
-            flash(f"“{dados['nome']}” atualizado.", "ok")
+            _, aviso_indice = _indexar(produto_id)
+            flash(f"“{dados['nome']}” atualizado.{aviso_indice}", "ok")
             return redirect(url_for("admin.produtos", novo=produto_id))
         flash("Confira os campos destacados.", "erro")
         return render_template("admin/form.html", p={**reexibir, "id": produto_id}, erros=erros,
@@ -254,10 +268,12 @@ def editar_produto(produto_id):
 @admin_obrigatorio
 def excluir_produto(produto_id):
     ok = mongo.excluir(produto_id)
+    indice = None
     if ok:
         redis_store.invalidar_cache()
+        indice, _ = _indexar(produto_id)  # produto não existe mais: os vetores dele são apagados
     if request.headers.get("X-Requested-With") == "fetch":
-        return jsonify(ok=ok), (200 if ok else 404)
+        return jsonify(ok=ok, indice=indice), (200 if ok else 404)
     flash("Produto excluído." if ok else "Produto não encontrado.", "ok" if ok else "erro")
     return redirect(url_for("admin.produtos"))
 
@@ -269,7 +285,8 @@ def alternar_ativo(produto_id):
     if ativo is None:
         return jsonify(erro="Produto não encontrado."), 404
     redis_store.invalidar_cache()
-    return jsonify(ativo=ativo)
+    indice, _ = _indexar(produto_id)  # desativado sai do índice; reativado volta
+    return jsonify(ativo=ativo, indice=indice)
 
 
 @bp.get("/produtos/<produto_id>/documento")

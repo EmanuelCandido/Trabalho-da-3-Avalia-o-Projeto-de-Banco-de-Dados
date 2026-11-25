@@ -113,7 +113,8 @@ O pgvector funciona como um **índice derivado**: pode ser apagado e reconstruí
 
 1. O cliente pergunta no chat (`POST /api/assistente`).
 2. Validação: 3 a 500 caracteres, CSRF (já existe), limite no Redis (15 perguntas a cada 10 min por visitante e um teto diário global para proteger a cota).
-3. Texto da busca: a pergunta. Se houver conversa recente, junta a pergunta anterior, para que "e em azul?" continue fazendo sentido. Se o chat foi aberto na página de um produto, junta o nome do produto.
+3. Texto da busca: a pergunta. Se houver conversa recente e a pergunta for curta (até 12 palavras), o `flash-lite` a **reescreve** como uma pergunta completa ("e em quais tamanhos?" → "Quais os tamanhos da camisa de linho?"); se ela já for independente ou mudar de assunto, volta igual. Se o chat foi aberto na página de um produto, junta o nome do produto.
+   - Decidido no teste de 25/11: juntar a pergunta anterior a toda pergunta curta estragava a troca de assunto ("vocês vendem tênis?" depois de uma pergunta de tamanho voltava "não encontrei") e fazia "quem ganhou a Copa?" passar do limiar por causa da pergunta anterior.
 4. Embedding da pergunta (`RETRIEVAL_QUERY`), com cache no Redis por 7 dias: a mesma pergunta não chama a API de novo.
 5. Busca vetorial: `select * from buscar_conhecimento(:vetor, 8)`.
 6. Filtros estruturados por expressão regular (busca híbrida simples): "até R$ 200" → preço; "masculino", "para ele/ela" → gênero. São aplicados depois da busca vetorial, com os dados atuais do MongoDB.
@@ -368,7 +369,7 @@ Na tela, `[n]` vira um marcador clicável que abre a fonte, e o texto do modelo 
    3. o SQL executado, com o `<=>`, e a tabela do top-k: fonte, título, similaridade em barra, distância e se passou do limiar;
    4. o prompt completo, com o contexto destacado;
    5. a resposta, os tokens e o tempo de cada etapa.
-   - Botão **"Responder sem RAG"**: manda a mesma pergunta ao modelo sem contexto. Ex.: "Qual o prazo de troca da NOMA?" → sem RAG, uma resposta genérica sobre o Código de Defesa do Consumidor; com RAG, "30 dias, e a primeira troca é grátis [1]".
+   - Botão **"Responder sem RAG"**: manda a mesma pergunta ao modelo sem contexto. Testado em 25/11: "Qual o valor mínimo para ter frete grátis?" → com RAG, "R$ 299 [1]" (certo); sem RAG, o modelo inventou "a partir de R$ 250,00". (A pergunta do prazo de troca não serve: sem RAG o modelo acertou os 30 dias por coincidência.)
    - Botão **"Comparar com a busca por texto"**: a busca antiga (regex no MongoDB) ao lado da vetorial, para a mesma consulta.
 4. **Documentos da base:** lista (título, origem, trechos, caracteres, ativo), envio de `.md`, `.txt` ou `.pdf` de até 2 MB (a Vercel aceita 4,5 MB por requisição), editar texto, excluir e "ver trechos" (com a sobreposição destacada).
 5. **Perguntas dos clientes:** as últimas 50, com a melhor similaridade, "sem resposta", 👍/👎 e tempo, mais o filtro "só sem resposta". Para a loja, isso mostra o que falta escrever na base.
@@ -489,7 +490,7 @@ Os vídeos anteriores não tinham narração. Neste vale narrar, e cada integran
 | 0:30–1:30 | Arquitetura: o que é embedding, pgvector no Supabase, MongoDB como fonte da verdade | João Pedro |
 | 1:30–2:30 | Indexação: `indexar.py --tudo`, a tabela `conhecimento` com os números, o índice HNSW | Emanuel |
 | 2:30–4:30 | Chat na loja: "algo fresco para o calor" (acha linho sem a palavra), "posso trocar depois de 20 dias?", "o que acham do caimento da polo?", "vocês vendem tênis?" (não vendemos calçados, com a fonte), "quem ganhou a Copa?" (não encontrei + WhatsApp, sem chamar o modelo). Abrir as fontes | João Pedro |
-| 4:30–6:00 | Laboratório: embedding, SQL com `<=>`, top-k com similaridade, prompt e resposta. Depois **"sem RAG"** para mostrar a resposta inventada | Emanuel |
+| 4:30–6:00 | Laboratório: embedding, SQL com `<=>`, top-k com similaridade, prompt e resposta. Depois **"sem RAG"** com "Qual o valor mínimo para ter frete grátis?" (com RAG: R$ 299; sem RAG: inventa R$ 250) | Emanuel |
 | 6:00–6:45 | Busca por texto × vetorial ("roupa para o frio") e "Você também pode gostar" | João Pedro |
 | 6:45–7:45 | n8n: cadastrar um produto novo no painel → execução no n8n com todos os nós verdes → linha nova no Supabase → o chat já responde sobre o produto | Emanuel |
 | 7:45–8:15 | Envio de um PDF de política → trechos → pergunta respondida com base nele | João Pedro |
@@ -528,6 +529,8 @@ Sugestão de divisão: **Emanuel** com o backend do RAG, o painel e o deploy; **
 | Risco | O que fazer |
 |---|---|
 | Cota do Gemini estourar no dia da gravação | Cache no Redis, gravar com antecedência, ter um segundo projeto no AI Studio (o limite é por projeto) e o modo "mostra os produtos sem escrever a resposta" |
+| Gemini com excesso de demanda (erro 503) | Visto várias vezes em 25/11 (respostas de até 20 s). `GEMINI_MODELO_RESERVA` é uma lista de modelos tentados na hora, sem espera, quando o principal responde 429/503 |
+| Redis do Upstash usado no `.env` local esgotou o limite gratuito (500 mil comandos/mês) em 25/11 | O `.env` local passou a usar o Redis do Docker (`docker compose up -d`). A versão online usa outro Redis e continuou funcionando. Descobrir o que gastou tanto antes de voltar ao Upstash |
 | Nome do modelo mudar ou ser descontinuado | Nome no `.env`; conferir no AI Studio antes de gravar |
 | Nó de embeddings do n8n com 3072 dimensões | Já evitado: HTTP Request com `outputDimensionality` |
 | `SET` sem efeito no pooler (modo transação) | Sempre `SET LOCAL` dentro de transação |

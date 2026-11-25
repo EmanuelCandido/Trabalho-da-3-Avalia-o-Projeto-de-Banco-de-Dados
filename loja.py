@@ -4,6 +4,7 @@ import json
 from flask import Blueprint, Response, abort, jsonify, render_template, request, session
 
 from bancos import mongo, redis_store, supabase
+from ia import indexador
 from utils import (brl, config_loja, link_whatsapp, mensagem_whatsapp, miniatura, montar_carrinho, visitante)
 
 bp = Blueprint("loja", __name__)
@@ -275,6 +276,9 @@ def api_avaliar(slug):
     if not ok:
         return jsonify(erro="Produto não encontrado."), 404
     redis_store.invalidar_cache()
+    p = mongo.por_slug(slug)
+    if p:
+        indexador.agendar(p["id"])  # a avaliação nova entra no texto de avaliações do produto no banco vetorial
     return jsonify(ok=True)
 
 
