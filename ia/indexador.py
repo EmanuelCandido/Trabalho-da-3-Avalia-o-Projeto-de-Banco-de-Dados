@@ -7,6 +7,7 @@ Fluxo de cada sincronização:
   4. apaga os trechos que sobraram (produto desativado ou excluído, seção removida de um documento);
   5. registra tudo na tabela indexacoes.
 """
+import logging
 import time
 from pathlib import Path
 
@@ -14,6 +15,8 @@ import requests
 
 from bancos import mongo, vetorial
 from ia import gemini, textos
+
+log = logging.getLogger("noma.ia")
 
 PASTA = Path(__file__).resolve().parent.parent / "conhecimento"
 FONTES_PRODUTO = ("produto", "avaliacao")
@@ -153,18 +156,23 @@ def indexar_tudo(origem="script"):
 
 # ---------------------------------------------------------------- chamado pelo painel ao salvar um produto
 
+N8N_CONECTAR = 2      # segundos: n8n desligado recusa na hora, e o Python assume
+N8N_RESPOSTA = 15     # segundos: o workflow gera os vetores no Gemini e grava no Supabase antes de responder
+
+
 def agendar(produto_id):
-    """Pede ao n8n para indexar o produto; se o n8n não estiver configurado ou não responder em 2,5 s,
-    o próprio Python indexa (na Vercel não dá para deixar tarefa rodando depois da resposta).
-    Devolve quem indexou: 'n8n', 'python' ou None (IA desligada ou erro)."""
+    """Pede ao n8n (workflow n8n/indexar-produto.json) para indexar o produto. Se o n8n não estiver configurado,
+    estiver desligado ou falhar, o próprio Python indexa (na Vercel não dá para deixar tarefa rodando depois da
+    resposta). Devolve quem indexou: 'n8n', 'python' ou None (IA desligada ou erro)."""
     if _n8n["url"]:
         try:
-            r = requests.post(_n8n["url"], json={"produto_id": str(produto_id)}, timeout=2.5,
+            r = requests.post(_n8n["url"], json={"produto_id": str(produto_id)}, timeout=(N8N_CONECTAR, N8N_RESPOSTA),
                               headers={"X-NOMA-Segredo": _n8n["segredo"]})
-            if r.ok:
+            if r.ok and (r.json() or {}).get("ok"):
                 return "n8n"
-        except requests.RequestException:
-            pass
+            log.warning("n8n respondeu %s; o Python indexa", r.status_code)
+        except (requests.RequestException, ValueError) as erro:
+            log.warning("n8n não respondeu (%s); o Python indexa", erro.__class__.__name__)
     if not gemini.ativo():
         return None
     try:

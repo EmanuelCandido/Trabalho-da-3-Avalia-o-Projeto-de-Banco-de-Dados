@@ -1,0 +1,17 @@
+[
+  {
+    "id": "NomaSupabasePg01",
+    "name": "NOMA · Supabase (pgvector)",
+    "type": "postgres",
+    "data": {
+      "host": "={{ $env.NOMA_PG_HOST }}",
+      "database": "={{ $env.NOMA_PG_BANCO }}",
+      "user": "={{ $env.NOMA_PG_USUARIO }}",
+      "password": "={{ $env.NOMA_PG_SENHA }}",
+      "port": 5432,
+      "ssl": "require",
+      "allowUnauthorizedCerts": true,
+      "maxConnections": 5
+    }
+  }
+]

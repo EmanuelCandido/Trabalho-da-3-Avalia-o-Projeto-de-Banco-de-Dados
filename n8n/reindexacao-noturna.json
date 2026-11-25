@@ -1,0 +1,221 @@
+{
+  "id": "NomaReindexNoite",
+  "name": "NOMA · Reindexação noturna",
+  "nodes": [
+    {
+      "id": "b8e47274-7f19-5370-ad58-ca112bb68409",
+      "name": "Todo dia às 3h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7be053dd-49ef-55f4-a62d-05f19d53c21a",
+      "name": "Executar agora",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "558b0e8f-b394-5b17-a06a-03af7fa36b1f",
+      "name": "Produtos ativos (Flask)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "url": "={{ $env.APP_URL }}/api/interno/produtos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-NOMA-Segredo",
+              "value": "={{ $env.NOMA_SEGREDO }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "b73e491d-ce49-5c72-8899-9845a9b346f3",
+      "name": "Produtos no pgvector",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select distinct referencia\n  from conhecimento\n where fonte in ('produto', 'avaliacao');",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "NomaSupabasePg01",
+          "name": "NOMA · Supabase (pgvector)"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "7d590358-b87e-58e9-a35a-ed4bad776282",
+      "name": "Lista para conferir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Confere todo produto ativo e também os que ainda têm vetores no banco:\n// um produto excluído ou desativado durante o dia volta vazio do Flask e tem os vetores apagados.\nconst ativos = $('Produtos ativos (Flask)').first().json.produtos;\nconst nomes = new Map(ativos.map((p) => [p.id, p.nome]));\nconst noBanco = $input.all().map((i) => i.json.referencia).filter(Boolean);\nconst ids = [...new Set([...ativos.map((p) => p.id), ...noBanco])];\nreturn ids.map((id) => ({ json: { produto_id: id, nome: nomes.get(id) || '(fora da loja)' } }));"
+      }
+    },
+    {
+      "id": "581d91c9-6295-5ef8-b608-fe2945add467",
+      "name": "Indexar cada produto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.NOMA_WEBHOOK }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-NOMA-Segredo",
+              "value": "={{ $env.NOMA_SEGREDO }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ produto_id: $json.produto_id }) }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 300
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "82931daa-f5a0-52ce-926a-705d2fd0014d",
+      "name": "Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.all().map((i) => i.json);\nconst soma = (campo) => r.reduce((total, x) => total + (x[campo] || 0), 0);\nreturn [{ json: { produtos: r.length, novos: soma('novos'), iguais: soma('iguais'), removidos: soma('removidos') } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Todo dia às 3h": {
+      "main": [
+        [
+          {
+            "node": "Produtos ativos (Flask)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar agora": {
+      "main": [
+        [
+          {
+            "node": "Produtos ativos (Flask)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Produtos ativos (Flask)": {
+      "main": [
+        [
+          {
+            "node": "Produtos no pgvector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Produtos no pgvector": {
+      "main": [
+        [
+          {
+            "node": "Lista para conferir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lista para conferir": {
+      "main": [
+        [
+          {
+            "node": "Indexar cada produto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Indexar cada produto": {
+      "main": [
+        [
+          {
+            "node": "Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "America/Sao_Paulo"
+  },
+  "pinData": {},
+  "active": false
+}

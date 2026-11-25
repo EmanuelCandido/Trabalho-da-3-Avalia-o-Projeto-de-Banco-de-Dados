@@ -382,6 +382,8 @@ Fluxo de design (CLAUDE.md): `craft-setup` (gera o `DESIGN.md` a partir do visua
 
 ## 9. n8n (bônus de 0,5)
 
+Feito em 25/11 no n8n 2.49.6 (Docker): `scripts/configurar_n8n.py` prepara o `.env`, importa e publica os workflows; os nós leem os segredos com `$env`, e a credencial do Postgres só tem referências ao ambiente. Testado: 401 com segredo errado, nada muda sem mudança, vetor regravado igual ao do Python, produto excluído tem os vetores apagados, reindexação noturna dos 18 produtos em 7 s e o painel cai para o Python com o n8n desligado. Detalhes em `n8n/README.md`.
+
 ### 9.1 Workflow "Indexar produto" (`n8n/indexar-produto.json`)
 
 1. **Webhook** `POST /webhook/noma-indexar` recebe `{produto_id, acao: "salvar" | "excluir"}` com o cabeçalho de segredo (`N8N_SEGREDO`).

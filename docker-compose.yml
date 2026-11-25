@@ -1,4 +1,5 @@
 # Redis local para desenvolvimento: docker compose up -d
+# n8n (bônus do trabalho de RAG): docker compose --profile n8n up -d   ->  http://localhost:5678
 # (MongoDB e Supabase ficam na nuvem: Atlas e supabase.com)
 services:
   redis:
@@ -6,3 +7,39 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
     restart: unless-stopped
+
+  # Mantém o banco vetorial em dia: o painel chama o webhook "noma-indexar" ao salvar um produto,
+  # e todo dia às 3h a reindexação noturna confere o catálogo inteiro. Workflows em n8n/*.json.
+  # Os segredos vêm do .env (N8N_SEGREDO, GEMINI_API_KEY e N8N_PG_*) e os nós leem com $env:
+  # nenhum segredo fica salvo nos workflows.
+  n8n:
+    image: n8nio/n8n:${N8N_VERSAO:-2.49.6}
+    profiles: ["n8n"]
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+      - TZ=America/Sao_Paulo
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_SECURE_COOKIE=false
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_RUNNERS_ENABLED=true
+      - APP_URL=${N8N_APP_URL:-http://host.docker.internal:5000}
+      - NOMA_SEGREDO=${N8N_SEGREDO}
+      - NOMA_WEBHOOK=http://localhost:5678/webhook/noma-indexar
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODELO_EMBEDDING=${GEMINI_MODELO_EMBEDDING:-gemini-embedding-001}
+      - EMBEDDING_DIM=${EMBEDDING_DIM:-768}
+      - NOMA_PG_HOST=${N8N_PG_HOST}
+      - NOMA_PG_USUARIO=${N8N_PG_USER}
+      - NOMA_PG_SENHA=${N8N_PG_SENHA}
+      - NOMA_PG_BANCO=${N8N_PG_BANCO:-postgres}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n_dados:/home/node/.n8n
+    restart: unless-stopped
+
+volumes:
+  n8n_dados:

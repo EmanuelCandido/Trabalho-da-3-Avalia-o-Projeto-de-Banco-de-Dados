@@ -1,0 +1,419 @@
+{
+  "id": "NomaIndexarProd1",
+  "name": "NOMA · Indexar produto",
+  "nodes": [
+    {
+      "id": "1285c68a-bfb6-5268-9f5e-f583a26ab600",
+      "name": "Webhook: produto salvo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "noma-indexar",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "fb4fd133-33c8-51a5-aa53-d29ce0377c7c"
+    },
+    {
+      "id": "b0a0e0f7-951a-535b-b810-8cfe474e0483",
+      "name": "Segredo e id conferem?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "segredo",
+              "leftValue": "={{ $json.headers['x-noma-segredo'] }}",
+              "rightValue": "={{ $env.NOMA_SEGREDO }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "id",
+              "leftValue": "={{ $json.body.produto_id }}",
+              "rightValue": "^[0-9a-f]{24}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f9911d02-67ea-564e-9d08-446e038b36a2",
+      "name": "Recusar (401)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        520
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"ok\": false, \"erro\": \"Segredo ou produto inválido.\"}",
+        "options": {
+          "responseCode": 401
+        }
+      }
+    },
+    {
+      "id": "9660f3a4-2048-5304-9f7a-bb2335a0479b",
+      "name": "Textos do produto (Flask)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "url": "={{ $env.APP_URL }}/api/interno/produto/{{ $json.body.produto_id }}/documentos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-NOMA-Segredo",
+              "value": "={{ $env.NOMA_SEGREDO }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      }
+    },
+    {
+      "id": "6f11e476-4327-5e80-b1d1-262fdbccdc35",
+      "name": "Hashes no pgvector",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select fonte, referencia, trecho, hash, modelo\n  from conhecimento\n where referencia = $1 and fonte in ('produto', 'avaliacao');",
+        "options": {
+          "queryReplacement": "={{ [ $json.produto_id ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "NomaSupabasePg01",
+          "name": "NOMA · Supabase (pgvector)"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "48f4dcb4-9283-5428-b76b-44c3b3e37bb9",
+      "name": "Separar o que mudou",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// O Flask monta os textos (o mesmo código que o Python usa para indexar);\n// aqui só se decide o que precisa de vetor novo, comparando o hash de cada trecho.\nconst flask = $('Textos do produto (Flask)').first().json;\nconst atuais = $input.all().map((i) => i.json).filter((r) => r.fonte);\nconst chave = (t) => `${t.fonte}|${t.referencia}|${t.trecho}`;\nconst noBanco = new Map(atuais.map((r) => [chave(r), r]));\nconst novos = flask.trechos.filter((t) => {\n  const atual = noBanco.get(chave(t));\n  return !atual || atual.hash !== t.hash || atual.modelo !== flask.modelo;\n});\nconst validos = new Set(flask.trechos.map(chave));\nconst sobrando = atuais.filter((r) => !validos.has(chave(r)))\n  .map((r) => ({ fonte: r.fonte, referencia: r.referencia, trecho: r.trecho }));\nconst modelo = flask.modelo.split('@')[0];\nreturn [{ json: {\n  produto_id: flask.produto_id, modelo: flask.modelo, dimensoes: flask.dimensoes, inicio: Date.now(),\n  novos, sobrando, iguais: flask.trechos.length - novos.length,\n  url_gemini: `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:batchEmbedContents`,\n  pedido_gemini: { requests: novos.map((t) => ({\n    model: `models/${modelo}`, content: { parts: [{ text: t.conteudo }] },\n    taskType: 'RETRIEVAL_DOCUMENT', title: t.titulo, outputDimensionality: flask.dimensoes,\n  })) },\n} }];"
+      }
+    },
+    {
+      "id": "c538e3eb-add0-5c09-aa2d-efd4b6660172",
+      "name": "Tem trecho novo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "novos",
+              "leftValue": "={{ $json.novos.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a6a840e3-46de-5e01-bdc9-e9a45cfa7798",
+      "name": "Gemini: embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url_gemini }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.pedido_gemini) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "f9ac2282-c809-5f13-9b1e-cbcc74c1b185",
+      "name": "Normalizar vetores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        180
+      ],
+      "parameters": {
+        "jsCode": "// O Gemini só normaliza o vetor de 3072 dimensões; com 768 a normalização é feita aqui,\n// igual ao Python (ia/gemini.py), para os vetores do n8n e do Python serem comparáveis.\nconst dados = $('Separar o que mudou').first().json;\nconst vetores = ($input.first().json.embeddings || []).map((e) => e.values);\nif (vetores.length !== dados.novos.length) {\n  throw new Error(`O Gemini devolveu ${vetores.length} vetores para ${dados.novos.length} trechos.`);\n}\nconst linhas = dados.novos.map((t, i) => {\n  const v = vetores[i];\n  const norma = Math.sqrt(v.reduce((soma, x) => soma + x * x, 0)) || 1;\n  return { fonte: t.fonte, referencia: t.referencia, trecho: t.trecho, titulo: t.titulo, conteudo: t.conteudo,\n           metadados: t.metadados || {}, hash: t.hash, modelo: dados.modelo,\n           embedding: '[' + v.map((x) => (x / norma).toFixed(7)).join(',') + ']' };\n});\nreturn [{ json: { quantidade: linhas.length, linhas } }];"
+      }
+    },
+    {
+      "id": "78e69661-ae56-5c02-8827-7b7e944695ee",
+      "name": "Gravar no pgvector",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        180
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into conhecimento (fonte, referencia, trecho, titulo, conteudo, metadados, hash, modelo, embedding, indexado_em)\nselect r.fonte, r.referencia, r.trecho, r.titulo, r.conteudo, coalesce(r.metadados, '{}'), r.hash, r.modelo,\n       r.embedding::extensions.vector, now()\n  from jsonb_to_recordset($1::jsonb) as r(fonte text, referencia text, trecho int, titulo text, conteudo text,\n                                          metadados jsonb, hash text, modelo text, embedding text)\non conflict (fonte, referencia, trecho) do update\n   set titulo = excluded.titulo, conteudo = excluded.conteudo, metadados = excluded.metadados,\n       hash = excluded.hash, modelo = excluded.modelo, embedding = excluded.embedding, indexado_em = now()\nreturning id;",
+        "options": {
+          "queryReplacement": "={{ [ JSON.stringify($json.linhas) ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "NomaSupabasePg01",
+          "name": "NOMA · Supabase (pgvector)"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "49380690-fd60-5bad-8289-513ec916d8f8",
+      "name": "Apagar sobras e registrar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Apaga os trechos que sobraram (produto excluído ou desativado, avaliações que sumiram)\n-- e registra a execução na tabela indexacoes, numa consulta só.\nwith apagados as (\n    delete from conhecimento c\n     using jsonb_to_recordset($1::jsonb) as s(fonte text, referencia text, trecho int)\n     where c.fonte = s.fonte and c.referencia = s.referencia and c.trecho = s.trecho\n returning 1\n)\ninsert into indexacoes (origem, escopo, trechos_novos, trechos_iguais, trechos_removidos, ms)\nselect 'n8n', $2, $3::int, $4::int, (select count(*) from apagados), $5::int\nreturning trechos_novos as novos, trechos_iguais as iguais, trechos_removidos as removidos, ms;",
+        "options": {
+          "queryReplacement": "={{ [ JSON.stringify($('Separar o que mudou').first().json.sobrando), 'produto:' + $('Separar o que mudou').first().json.produto_id, $('Separar o que mudou').first().json.novos.length, $('Separar o que mudou').first().json.iguais, Date.now() - $('Separar o que mudou').first().json.inicio ] }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "NomaSupabasePg01",
+          "name": "NOMA · Supabase (pgvector)"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "75676d19-1b37-5fda-a654-8853f4fad3b1",
+      "name": "Responder ao painel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, quem: 'n8n', novos: $json.novos, iguais: $json.iguais, removidos: $json.removidos, ms: $json.ms }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: produto salvo": {
+      "main": [
+        [
+          {
+            "node": "Segredo e id conferem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Segredo e id conferem?": {
+      "main": [
+        [
+          {
+            "node": "Textos do produto (Flask)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recusar (401)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Textos do produto (Flask)": {
+      "main": [
+        [
+          {
+            "node": "Hashes no pgvector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hashes no pgvector": {
+      "main": [
+        [
+          {
+            "node": "Separar o que mudou",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar o que mudou": {
+      "main": [
+        [
+          {
+            "node": "Tem trecho novo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem trecho novo?": {
+      "main": [
+        [
+          {
+            "node": "Gemini: embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apagar sobras e registrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: embeddings": {
+      "main": [
+        [
+          {
+            "node": "Normalizar vetores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar vetores": {
+      "main": [
+        [
+          {
+            "node": "Gravar no pgvector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gravar no pgvector": {
+      "main": [
+        [
+          {
+            "node": "Apagar sobras e registrar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apagar sobras e registrar": {
+      "main": [
+        [
+          {
+            "node": "Responder ao painel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}
