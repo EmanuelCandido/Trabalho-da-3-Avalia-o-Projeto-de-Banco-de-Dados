@@ -1,15 +1,21 @@
 """Módulo do cliente (público): catálogo, produto, carrinho e finalização pelo WhatsApp."""
 import json
+import logging
 
-from flask import Blueprint, Response, abort, jsonify, render_template, request, session
+import psycopg
+from flask import Blueprint, Response, abort, current_app, jsonify, render_template, request, session
+from redis.exceptions import RedisError
 
-from bancos import mongo, redis_store, supabase
-from ia import indexador
+from bancos import mongo, redis_store, supabase, vetorial
+from ia import busca as ia_busca
+from ia import gemini, indexador, rag
 from utils import (brl, config_loja, link_whatsapp, mensagem_whatsapp, miniatura, montar_carrinho, visitante)
 
 bp = Blueprint("loja", __name__)
+log = logging.getLogger("noma.ia")
 
 POR_PAGINA = 12
+MAX_BUSCA = 24
 LISTAGENS = {
     "roupas": {"titulo": "Roupas", "subtitulo": "Peças essenciais para combinar com a vida que acontece.",
                "rotulo": "Todas as roupas", "filtro": {"categoria": "Roupas"}},
@@ -64,6 +70,45 @@ def busca():
     return _listagem("busca")
 
 
+class _CotaDaBusca(Exception):
+    """Teto diário de buscas por significado atingido: a página usa só a busca por texto."""
+
+
+def _ids_da_busca(q):
+    """Ids da página /busca: primeiro quem tem o termo escrito (MongoDB), depois quem tem o mesmo significado
+    (pgvector). Devolve {"ids", "exatos", "modo"}. Sem IA, ou se ela falhar, fica só a busca por texto."""
+    exatos = mongo.ids(mongo.montar_filtro(q=q), MAX_BUSCA)
+    so_texto = {"ids": exatos, "exatos": len(exatos), "modo": "texto"}
+    if not gemini.ativo() or len(q) < 3:
+        return so_texto
+
+    def por_significado():
+        try:
+            if not redis_store.usar_cota_do_dia(current_app.config["IA_LIMITE_BUSCA_DIA"], "busca"):
+                raise _CotaDaBusca
+        except RedisError:
+            pass
+        ids, r = ia_busca.ids_semelhantes(q, MAX_BUSCA)
+        vetorial.registrar_interacao(
+            tipo="busca", visitante=rag.visitante_hash(session.get("vid")), pergunta=q, consulta=r["consulta"],
+            trechos=[{"id": t["id"], "fonte": t["fonte"], "titulo": t["titulo"], "similaridade": t["similaridade"]}
+                     for t in r["trechos"] if t["referencia"] in ids],
+            melhor_similaridade=r["melhor_similaridade"], sem_resposta=not (ids or exatos),
+            ms_embedding=r["ms_embedding"], ms_busca=r["ms_busca"])
+        return ids
+
+    try:
+        semelhantes = redis_store.lembrar(f"semantica:{q.lower()}", por_significado)
+    except _CotaDaBusca:
+        log.warning("Busca por significado: cota do dia atingida")
+        return so_texto
+    except (gemini.ErroIA, psycopg.Error) as erro:
+        log.warning("Busca por significado falhou (%r); usando só texto", erro)
+        return so_texto
+    ids = (exatos + [i for i in semelhantes if i not in exatos])[:MAX_BUSCA]
+    return {"ids": ids, "exatos": len(exatos), "modo": "significado"}
+
+
 def _listagem(secao):
     q = (request.args.get("q") or "").strip()[:80]
     if secao == "busca":
@@ -74,11 +119,18 @@ def _listagem(secao):
     escolhidos = {f: request.args.get(f) for f in FILTROS if request.args.get(f)}
     ordem = request.args.get("ordem", "relevancia")
     pagina = max(1, request.args.get("pagina", 1, type=int))
-    filtro_mongo = mongo.montar_filtro(**info["filtro"], **escolhidos, q=q or None)
+    pular = (pagina - 1) * POR_PAGINA
+    chave = {"s": secao, "q": q, "f": escolhidos, "o": ordem, "p": pagina}
+    achados = _ids_da_busca(q) if secao == "busca" and q else None
 
-    chave = "lista:" + json.dumps({"s": secao, "q": q, "f": escolhidos, "o": ordem, "p": pagina}, sort_keys=True)
-    itens, total = redis_store.lembrar(chave, lambda: mongo.listar(
-        filtro_mongo, ordem, POR_PAGINA, (pagina - 1) * POR_PAGINA))
+    def carregar():
+        if achados:
+            return mongo.listar_ids(achados["ids"], mongo.montar_filtro(**escolhidos), ordem, POR_PAGINA, pular)
+        return mongo.listar(mongo.montar_filtro(**info["filtro"], **escolhidos, q=q or None), ordem, POR_PAGINA, pular)
+
+    if achados:
+        chave["ids"] = achados["ids"]
+    itens, total = redis_store.lembrar("lista:" + json.dumps(chave, sort_keys=True), carregar)
     tem_mais = pagina * POR_PAGINA < total
 
     if request.args.get("parcial"):
@@ -89,7 +141,7 @@ def _listagem(secao):
     opcoes = redis_store.lembrar(f"opcoes:{categoria or 'todas'}", lambda: mongo.opcoes_filtro(categoria))
     return render_template("loja/listagem.html", secao=secao, info=info, produtos=itens, total=total,
                            opcoes=opcoes, escolhidos=escolhidos, ordem=ordem, q=q, pagina=pagina,
-                           tem_mais=tem_mais, ordens=ORDENS_ROTULOS, faixas=FAIXAS_ROTULOS)
+                           tem_mais=tem_mais, ordens=ORDENS_ROTULOS, faixas=FAIXAS_ROTULOS, achados=achados)
 
 
 ORDENS_ROTULOS = {"relevancia": "Relevância", "mais-vendidos": "Mais vendidos", "menor-preco": "Menor preço",
@@ -109,7 +161,11 @@ def produto(slug):
         vistos = mongo.por_ids(ids)
     except Exception:
         vistos = []
-    return render_template("loja/produto.html", p=p, vistos=vistos)
+    try:  # vizinhos do vetor da peça no pgvector; não chama a API do Gemini
+        parecidos = redis_store.lembrar(f"parecidos:{p['id']}", lambda: ia_busca.parecidos(p["id"]))
+    except Exception:
+        parecidos = []
+    return render_template("loja/produto.html", p=p, vistos=vistos, parecidos=parecidos)
 
 
 @bp.get("/sobre")

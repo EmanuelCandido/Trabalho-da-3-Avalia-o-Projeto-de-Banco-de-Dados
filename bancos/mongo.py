@@ -211,6 +211,29 @@ def por_ids(ids):
     return [docs[i] for i in ids if i in docs]
 
 
+def ids(filtro, limite=24):
+    """Só os ids (texto) dos produtos do filtro, na ordem de relevância da vitrine."""
+    cursor = produtos().find(filtro, {"_id": 1}).sort(ORDENS["relevancia"]).limit(limite)
+    return [str(d["_id"]) for d in cursor]
+
+
+def listar_ids(lista_ids, filtro, ordem="relevancia", limite=12, pular=0):
+    """Como listar(), mas dentro de uma lista de ids já ordenada (resultado da busca por significado).
+    Em "relevancia" vale a ordem da lista; nas outras ordens, a do MongoDB."""
+    oids = [o for o in (_oid(i) for i in lista_ids) if o]
+    if not oids:
+        return [], 0
+    cursor = produtos().find({**filtro, "_id": {"$in": oids}}, {"descricao": 0, "avaliacoes.texto": 0})
+    pela_lista = ordem == "relevancia" or ordem not in ORDENS
+    if not pela_lista:
+        cursor = cursor.sort(ORDENS[ordem])
+    docs = [serializar(d) for d in cursor]
+    if pela_lista:
+        posicao = {i: n for n, i in enumerate(lista_ids)}
+        docs.sort(key=lambda p: posicao[p["id"]])
+    return docs[pular:pular + limite], len(docs)
+
+
 def sugestoes(q, limite=6):
     if not q or len(q.strip()) < 2:
         return []

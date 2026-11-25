@@ -27,12 +27,13 @@
       <span class="item__foto"><span class="esq esq--foto esqueleto"></span></span><div><span class="esq esq--nome esqueleto"></span><span class="esq esq--curta esqueleto"></span>
       <span class="esq esq--preco esqueleto"></span><span class="esq esq--qtd esqueleto"></span></div><span></span></div>`).join("");
 
-  async function api(url, { metodo = "GET", dados } = {}) {
+  async function api(url, { metodo = "GET", dados, ...extra } = {}) {
     const resp = await fetch(url, {
       method: metodo,
       headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF, "X-Requested-With": "fetch" },
       body: dados ? JSON.stringify(dados) : undefined,
       credentials: "same-origin",
+      ...extra,
     });
     let json = {};
     try { json = await resp.json(); } catch { /* resposta sem JSON */ }
@@ -41,7 +42,7 @@
   }
 
   /* ------------------------------------------------ toasts */
-  function toast(msg, tipo = "ok", link) {
+  function toast(msg, tipo = "ok", link, duracao) {
     const caixa = $("[data-toasts]");
     if (!caixa) return;
     const t = document.createElement("div");
@@ -51,7 +52,7 @@
     if (link) t.querySelector("[data-acao]").addEventListener("click", (e) => { e.preventDefault(); link.acao(); fechar(); });
     caixa.append(t);
     const fechar = () => { t.classList.add("saindo"); setTimeout(() => t.remove(), 350); };
-    setTimeout(fechar, tipo === "erro" ? 4800 : 3200);
+    setTimeout(fechar, duracao || (tipo === "erro" ? 4800 : 3200));
   }
   window.nomaToast = toast;
   try { JSON.parse($("#flash")?.textContent || "[]").forEach(([tipo, msg]) => toast(msg, tipo)); } catch { /* sem avisos */ }
@@ -249,8 +250,82 @@
     if (modalAberto) return fecharModal();
     if (!$("[data-busca]").hidden) return fecharBusca();
     if ($("[data-gaveta].aberta")) return fecharCarrinho();
-    if (nav?.classList.contains("aberto")) esconderVeu();
+    if (nav?.classList.contains("aberto")) return esconderVeu();
+    if (chat && raiz.classList.contains("chat-aberto")) fecharChat();
   });
+
+  /* ================================================ CHAT "PERGUNTE À NOMA" ================================================
+     Aqui fica só abrir, fechar e baixar. A conversa está em assistente.js, baixado no primeiro uso com o CSS dele. */
+  const chat = $("[data-chat]"), raiz = document.documentElement;
+  const telaLarga = matchMedia("(min-width: 1280px)");  // painel acoplado ao lado da página, sem véu
+  const foraDoChat = () => $$(".faixa, #topo, #conteudo, .rodape");
+  let quemAbriuChat = null, baixandoChat = null;
+
+  function baixarChat() {
+    baixandoChat ||= Promise.all([
+      new Promise((ok, erro) => {
+        const l = Object.assign(document.createElement("link"), { rel: "stylesheet", href: chat.dataset.css, onload: ok, onerror: () => { l.remove(); erro(); } });
+        document.head.append(l);
+      }),
+      new Promise((ok, erro) => {
+        const s = Object.assign(document.createElement("script"), { src: chat.dataset.js, onload: ok, onerror: () => { s.remove(); erro(); } });
+        document.head.append(s);
+      }),
+    ]).catch((e) => { baixandoChat = null; throw e; });
+    return baixandoChat;
+  }
+
+  function lembrarChat(aberto) {
+    try { if (aberto) sessionStorage.setItem("noma:chat", "1"); else sessionStorage.removeItem("noma:chat"); } catch { /* armazenamento indisponível */ }
+  }
+
+  async function iniciarChat(opcoes) {
+    const abrindo = $("[data-chat-abrindo]", chat), falhou = $("[data-chat-falhou]", chat);
+    falhou.hidden = true; abrindo.hidden = !!window.nomaChat;
+    try {
+      await baixarChat();
+      await window.nomaChat.iniciar(opcoes);
+    } catch {
+      falhou.hidden = false;
+      $("[data-chat-tentar]", chat).onclick = () => iniciarChat(opcoes);
+    }
+    abrindo.hidden = true;
+  }
+
+  function abrirChat({ botao = null, produto = null, pergunta = "", foco = true } = {}) {
+    quemAbriuChat = botao;
+    chat.inert = false; chat.setAttribute("aria-hidden", "false");
+    raiz.classList.add("chat-aberto");
+    chat.setAttribute("aria-modal", String(!telaLarga.matches));
+    if (telaLarga.matches) lembrarChat(true);
+    else {
+      foraDoChat().forEach((el) => { el.inert = true; });
+      mostrarVeu(esconderChat);
+    }
+    iniciarChat({ produto, pergunta, foco });
+  }
+
+  function esconderChat() {
+    raiz.classList.remove("chat-aberto");
+    chat.inert = true; chat.setAttribute("aria-hidden", "true");
+    foraDoChat().forEach((el) => { el.inert = false; });
+    lembrarChat(false);
+    quemAbriuChat?.focus({ preventScroll: true }); quemAbriuChat = null;
+  }
+  const fecharChat = () => (aoFecharVeu === esconderChat ? esconderVeu() : esconderChat());
+
+  if (chat) {
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-abrir-chat]");
+      if (!b) return;
+      const sobre = b.hasAttribute("data-sobre-produto") ? $("[data-produto]") : null;
+      abrirChat({ botao: b, pergunta: b.dataset.pergunta || "",
+        produto: sobre && { id: sobre.dataset.produto, nome: $(".info__nome", sobre).textContent.trim() } });
+    });
+    $("[data-fechar-chat]", chat).addEventListener("click", fecharChat);
+    telaLarga.addEventListener("change", () => { if (raiz.classList.contains("chat-aberto")) fecharChat(); });
+    if (raiz.classList.contains("chat-aberto")) abrirChat({ foco: false });  // estava aberto na página anterior
+  }
 
   /* ================================================ CARRINHO ================================================ */
   const gaveta = $("[data-gaveta]");
@@ -603,11 +678,19 @@
         resultados.innerHTML = r.itens.length
           ? r.itens.map((it, i) => `<a class="sugestao" style="--i:${i}" href="/produto/${esc(it.slug)}"><img src="${esc(it.imagem)}" alt=""><span>${marcar(it.nome, q)}<small>${esc(it.categoria)}</small></span><b>${esc(it.preco)}</b></a>`).join("")
             + `<a class="sugestao__ver" href="/busca?q=${encodeURIComponent(q)}">Ver todos os resultados ${icone("seta")}</a>`
-          : `<p class="busca__dica">Nada encontrado para “${esc(q)}”. Tente “linho”, “camiseta” ou “bolsa”.</p>`;
+          : chat  // com a IA ligada, a página de busca também procura pelo significado
+            ? `<a class="sugestao__ver" href="/busca?q=${encodeURIComponent(q)}">Ver peças que combinam com “${esc(q)}” ${icone("seta")}</a>`
+            : `<p class="busca__dica">Nada encontrado para “${esc(q)}”. Tente “linho”, “camiseta” ou “bolsa”.</p>`;
       } catch (err) { if (q === ultimaBusca) resultados.innerHTML = `<p class="busca__dica">${esc(err.message)}</p>`; }
       finally { if (q === ultimaBusca) resultados.removeAttribute("aria-busy"); }
     }, 200);
   });
+  entrada?.form.addEventListener("submit", (e) => {
+    if (!entrada.value.trim()) { e.preventDefault(); return; }
+    clearTimeout(buscaTimer); ultimaBusca = "";  // a busca ao vivo não sobrescreve o esqueleto
+    resultados.innerHTML = esqSugestoes(3); resultados.setAttribute("aria-busy", "true");
+  });
+  addEventListener("pageshow", (e) => { if (e.persisted && resultados) { resultados.innerHTML = dicaInicial; resultados.removeAttribute("aria-busy"); } });
   entrada?.addEventListener("keydown", (e) => {
     const itens = $$(".sugestao", resultados);
     if (!itens.length || !["ArrowDown", "ArrowUp", "Enter"].includes(e.key)) return;
@@ -671,6 +754,9 @@
     ligarListagem();
     addEventListener("popstate", () => navegar(location.href, false));
   }
+
+  /* usado por assistente.js */
+  window.noma = { $, $$, api, esc, icone, toast, reduzir };
 
   /* contador inicial (sem animação) */
   if (contador) contador.classList.toggle("tem", +contador.textContent > 0);

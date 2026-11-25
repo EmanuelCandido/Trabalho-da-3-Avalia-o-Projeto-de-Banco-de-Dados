@@ -72,7 +72,7 @@ def conferir_csrf():
         enviado = request.headers.get("X-CSRF-Token") or request.form.get("csrf")
         if not enviado or not secrets.compare_digest(enviado, session.get("csrf", "")):
             if request.is_json or request.path.startswith("/api/"):
-                return jsonify(erro="Sua sessão expirou. Recarregue a página."), 400
+                return jsonify(erro="Sua sessão expirou. Recarregue a página.", sessao=True), 400
             abort(400)
     return None
 

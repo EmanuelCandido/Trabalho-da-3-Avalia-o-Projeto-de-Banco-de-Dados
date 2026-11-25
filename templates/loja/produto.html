@@ -1,5 +1,5 @@
 {% extends "loja/base.html" %}
-{% from "_macros.html" import icone, estrelas %}
+{% from "_macros.html" import icone, estrelas, card %}
 {% block titulo %}{{ p.nome }} — NOMA{% endblock %}
 {% block conteudo %}
 {% set esgotado = p.estoque <= 0 %}
@@ -62,9 +62,12 @@
             </div>
             <p class="opcoes__aviso" data-aviso-tamanho hidden>{{ icone('alerta') }} Escolha um tamanho para continuar.</p>
           </fieldset>
+          {% endif %}
+          {% if tamanhos or ia_ativa %}
           <div class="duvida">
-            <p>{{ icone('ajuda-cheio') }} Ficou com dúvidas sobre o seu tamanho?</p>
-            <button class="duvida__botao" type="button" data-abrir-modal="medidas">{{ icone('fita') }} Guia de medidas</button>
+            <p>{{ icone('ajuda-cheio') }} Ficou com dúvidas sobre {{ 'o seu tamanho' if tamanhos else 'esta peça' }}?</p>
+            {% if tamanhos %}<button class="duvida__botao" type="button" data-abrir-modal="medidas">{{ icone('fita') }} Guia de medidas</button>{% endif %}
+            {% if ia_ativa %}<button class="duvida__botao" type="button" data-abrir-chat data-sobre-produto>{{ icone('conversa') }} Tirar dúvida sobre esta peça</button>{% endif %}
           </div>
           {% endif %}
 
@@ -166,6 +169,15 @@
       </div>
     </div>
   </section>
+
+  {% if parecidos %}
+  <section class="secao" aria-labelledby="parecidos-titulo">
+    <h2 class="secao__titulo revelar" id="parecidos-titulo">Você também pode gostar</h2>
+    <div class="grade grade--parecidos">
+      {% for x in parecidos %}{{ card(x, loop.index0, compacto=true) }}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
 
   {% include "loja/_vistos.html" %}
 </div>

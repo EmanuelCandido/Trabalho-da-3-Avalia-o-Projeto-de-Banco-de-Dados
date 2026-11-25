@@ -343,10 +343,10 @@ Na tela, `[n]` vira um marcador clicável que abre a fonte, e o texto do modelo 
 
 **Botão "Pergunte à NOMA"** no canto inferior direito. Some quando a gaveta do carrinho abre e não cobre os avisos (*toasts*).
 
-**Painel do chat** (computador: cartão de ~400 × 600 px; celular: tela cheia):
-- Cabeçalho: "Assistente NOMA", "Responde com base no catálogo e nas políticas da loja", limpar conversa, fechar.
+**Painel do chat** (feito em 25/11; a partir de 1280 px fica acoplado à direita, com 400 px, e a página se estreita; abaixo disso abre por cima, e no celular ocupa a tela. As decisões estão no `DESIGN.md`):
+- Cabeçalho: "Pergunte à NOMA", limpar conversa (com "Desfazer" por 5 s), fechar.
 - Estado vazio: saudação e 4 sugestões: "Qual peça é mais fresca para o calor?", "Posso trocar depois de 20 dias?", "Presente masculino até R$ 200", "Tenho 94 cm de busto, qual tamanho uso?".
-- Mensagem da assistente: texto com marcadores `[n]`, cards dos produtos citados (foto, nome, preço, "Ver produto"), sanfona **"Fontes"** (tipo, título e barra de similaridade) e 👍/👎.
+- Mensagem da assistente: texto com marcadores `[n]`, cards dos produtos citados (foto, nome, preço, "Ver produto"), sanfona **"Fontes"** (só as citadas, com título e link; a similaridade fica no laboratório) e 👍/👎.
 - Esperando: indicador animado com "Buscando no catálogo…".
 - Sem resposta: "Não encontrei isso na nossa base" + botão do WhatsApp com a pergunta já escrita.
 - Erros: limite atingido ("Você fez muitas perguntas seguidas. Tente de novo em alguns minutos."), IA fora do ar (mostra os produtos encontrados mesmo assim), rede caiu (botão "Tentar de novo").
@@ -357,7 +357,7 @@ Na tela, `[n]` vira um marcador clicável que abre a fonte, e o texto do modelo 
 
 **Página do produto:** "Você também pode gostar" (4 vizinhos no espaço vetorial, sem custo de API) e "Tirar dúvida sobre esta peça".
 
-**Busca (`/busca`):** ao apertar Enter, resultados por significado: correspondências exatas primeiro, depois os itens acima do limiar, até 24. Os filtros e a ordenação atuais continuam valendo sobre esse conjunto. A **busca ao vivo enquanto digita continua por texto**, porque cada tecla viraria uma chamada à API.
+**Busca (`/busca`):** ao apertar Enter, resultados por significado: correspondências exatas primeiro, depois os itens parecidos, até 24. O limiar fixo não bastava ("presente masculino" trazia 16 das 18 peças): o melhor produto precisa passar de 0,62, e os outros precisam ficar 0,8 desvio-padrão acima da média dos candidatos (`ia/busca.py`, `_corte`). Se a busca já tem preço ou gênero, vale só o limiar. Os filtros e a ordenação atuais continuam valendo sobre esse conjunto. A **busca ao vivo enquanto digita continua por texto**, porque cada tecla viraria uma chamada à API.
 
 ### 8.2 Painel — "Assistente IA"
 
@@ -491,7 +491,7 @@ Os vídeos anteriores não tinham narração. Neste vale narrar, e cada integran
 | 1:30–2:30 | Indexação: `indexar.py --tudo`, a tabela `conhecimento` com os números, o índice HNSW | Emanuel |
 | 2:30–4:30 | Chat na loja: "algo fresco para o calor" (acha linho sem a palavra), "posso trocar depois de 20 dias?", "o que acham do caimento da polo?", "vocês vendem tênis?" (não vendemos calçados, com a fonte), "quem ganhou a Copa?" (não encontrei + WhatsApp, sem chamar o modelo). Abrir as fontes | João Pedro |
 | 4:30–6:00 | Laboratório: embedding, SQL com `<=>`, top-k com similaridade, prompt e resposta. Depois **"sem RAG"** com "Qual o valor mínimo para ter frete grátis?" (com RAG: R$ 299; sem RAG: inventa R$ 250) | Emanuel |
-| 6:00–6:45 | Busca por texto × vetorial ("roupa para o frio") e "Você também pode gostar" | João Pedro |
+| 6:00–6:45 | Busca por texto × vetorial ("roupa para academia") e "Você também pode gostar" | João Pedro |
 | 6:45–7:45 | n8n: cadastrar um produto novo no painel → execução no n8n com todos os nós verdes → linha nova no Supabase → o chat já responde sobre o produto | Emanuel |
 | 7:45–8:15 | Envio de um PDF de política → trechos → pergunta respondida com base nele | João Pedro |
 | 8:15–8:30 | Fechamento: tecnologias e links | os dois |

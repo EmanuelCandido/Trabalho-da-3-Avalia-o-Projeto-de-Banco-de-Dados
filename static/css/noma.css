@@ -449,6 +449,7 @@ p { margin: 0; }
 .gaveta { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--superficie); z-index: 61; display: flex; flex-direction: column;
   transform: translateX(105%); transition: transform .5s var(--suavizar); box-shadow: var(--sombra-g); }
 .gaveta.aberta { transform: none; }
+.gaveta:not(.aberta) { box-shadow: none; }  /* fechada, a sombra vazava na borda direita da página */
 .gaveta__topo { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 14px; border-bottom: 1px solid var(--linha); }
 .gaveta__topo h2 { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
 .gaveta__itens { flex: 1; overflow-y: auto; padding: 4px 20px; }
@@ -763,3 +764,42 @@ img, picture, svg, video {
 }
 img { pointer-events: none; }
 a img, button img, [role="button"] img { pointer-events: none; }
+
+/* ------------------------------------------------ chat "Pergunte à NOMA": botão e painel (a conversa está em assistente.css) */
+.perguntar { position: fixed; right: 24px; bottom: 24px; z-index: 50; display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 20px 0 16px; border-radius: 99px;
+  background: var(--superficie); color: var(--texto); font-size: 14px; font-weight: 600; box-shadow: var(--sombra), inset 0 0 0 1px var(--linha);
+  transition: box-shadow .2s, transform .2s var(--mola), opacity .2s; }
+.perguntar:hover { box-shadow: var(--sombra), inset 0 0 0 1px var(--texto); }
+.perguntar:active { transform: scale(.97); }
+/* a visibilidade só espera na hora de esconder: ao mostrar, o elemento precisa aceitar o foco na mesma hora */
+.chat-aberto .perguntar { opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s .2s; }
+.gaveta__acoes { display: flex; gap: 8px; }
+.gaveta--chat { z-index: 64; visibility: hidden; transition: transform .4s var(--suavizar), visibility 0s .4s; }
+.chat-aberto .gaveta--chat { transform: none; visibility: visible; box-shadow: var(--sombra-g); transition: transform .5s var(--suavizar), visibility 0s; }
+.chat__corpo { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 20px; position: relative; }
+.chat__corpo:focus { outline: none; }
+.chat__abrindo { display: grid; gap: 4px; }
+.vazio__acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 10px; }
+.vazio__acoes .botao { margin-top: 0; }
+
+/* Tela larga: o painel fica ao lado e a página se estreita, em vez de ficar coberta (o carrinho abre por cima dele). */
+@media (min-width: 1280px) {
+  .chat-aberto .gaveta--chat, .gaveta--chat { width: 400px; z-index: 45; box-shadow: none; border-left: 1px solid var(--linha); }
+  .chat-aberto { --respiro: clamp(24px, 3vw, 64px); --largura: min(1720px, calc(100vw - 400px - 2 * var(--respiro))); }
+  .chat-aberto body { padding-right: 400px; }
+  .chat-aberto .grade:not(.grade--3, .grade--queridinhos, .grade--parecidos) { grid-template-columns: repeat(3, 1fr); }
+  .chat-aberto .produto__topo { grid-template-columns: minmax(0, 1.25fr) minmax(320px, 1fr); }
+  .chat-aberto .galeria--2 { grid-template-columns: 1fr; }
+  .chat-aberto .nav { gap: clamp(16px, 1.6vw, 28px); white-space: nowrap; }
+}
+@media (max-width: 1080px) { .grade--parecidos { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
+@media (max-width: 640px) {
+  .perguntar { right: 16px; bottom: 16px; width: 52px; height: 52px; padding: 0; justify-content: center; }
+  .perguntar span { display: none; }
+  .gaveta--chat { width: 100%; }
+  .grade--parecidos { grid-template-columns: 1fr 1fr; gap: 28px 10px; }
+  /* os avisos sobem para não cobrir o botão nem o campo do chat */
+  .com-chat .toasts { bottom: 84px; }
+  .chat-aberto .toasts { bottom: 120px; }
+}
+.leve .perguntar { transition: none; }

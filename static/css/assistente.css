@@ -1,0 +1,89 @@
+/* NOMA — conversa do chat "Pergunte à NOMA" (baixado no primeiro uso; o botão e o painel estão em noma.css) */
+
+/* ------------------------------------------------ tela inicial */
+.chat__inicio { display: grid; gap: 20px; }
+.chat__inicio > p { color: var(--suave); text-wrap: pretty; }
+.chat__inicio b { color: var(--texto); font-weight: 600; }
+.chat__inicio ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linha); }
+.chat__inicio li { border-bottom: 1px solid var(--linha); }
+.chat__inicio button { width: 100%; min-height: 48px; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; font-weight: 500; }
+.chat__inicio .i { width: 18px; height: 18px; color: var(--apagado); transition: transform .2s, color .2s; }
+.chat__inicio button:hover .i { transform: translateX(3px); color: var(--texto); }
+
+/* ------------------------------------------------ mensagens */
+.chat__conversa { display: flex; flex-direction: column; gap: 16px; }
+.msg { animation: msgEntra .35s var(--suavizar); overflow-wrap: anywhere; }
+@keyframes msgEntra { from { opacity: 0; transform: translateY(8px); } }
+.msg--cliente { align-self: flex-end; max-width: 86%; padding: 10px 14px; border-radius: var(--raio-g); background: var(--fundo); white-space: pre-wrap; }
+.msg--loja { display: grid; gap: 12px; padding-bottom: 12px; }
+.msg--loja > .botao { justify-self: start; }
+.msg__texto { display: grid; gap: 8px; line-height: 1.6; }
+.msg__texto p { text-wrap: pretty; }
+.msg__texto ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.msg__pecas { display: grid; gap: 4px; margin: 0 -8px; }
+.msg__pecas .sugestao { animation: none; font-size: 14px; }
+.msg__pecas .sugestao span { font-weight: 600; line-height: 1.3; }
+.msg__pecas .sugestao small { font-weight: 400; font-size: 12px; margin-top: 2px; }
+.msg__pecas .sugestao b { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.msg__pecas .sugestao s { display: block; color: var(--suave); font-size: 12px; font-weight: 400; }
+.msg__pecas .sugestao img { background: #e9e9ec; }
+
+.msg--espera { display: grid; gap: 4px; }
+.msg--espera p { color: var(--suave); font-size: 14px; }
+.msg--espera .esq { margin-top: 8px; }
+
+/* número da fonte dentro do texto */
+.cita { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin: 0 0 0 3px; padding: 0 5px; border-radius: 99px; background: var(--fundo); color: var(--suave);
+  font-size: 11px; font-weight: 600; line-height: 1; vertical-align: 2px; font-variant-numeric: tabular-nums; transition: background .2s, color .2s; }
+.cita:hover { background: var(--preto); color: #fff; }
+
+.msg__pe { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 4px 12px; font-size: 13px; color: var(--suave); }
+.msg__pe:empty { display: none; }
+.fontes summary { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; cursor: pointer; list-style: none; transition: color .2s; }
+.fontes summary::-webkit-details-marker { display: none; }
+.fontes summary:hover { color: var(--texto); }
+.fontes summary .i { width: 15px; height: 15px; transition: transform .25s var(--suavizar); }
+.fontes[open] { flex-basis: 100%; }
+.fontes[open] summary .i { transform: rotate(180deg); }
+.fontes ol { list-style: none; margin: 4px 0 8px; padding: 0; display: grid; gap: 2px; }
+.fontes li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; padding: 6px 8px; margin: 0 -8px; border-radius: var(--raio); color: var(--texto); scroll-margin-bottom: 16px; }
+.fontes li span { color: var(--suave); text-align: right; font-variant-numeric: tabular-nums; }
+.fontes a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--linha-forte); transition: text-decoration-color .2s; }
+.fontes a:hover { text-decoration-color: currentColor; }
+.fontes li.marcada { animation: fonteMarcada 1.6s ease; }
+@keyframes fonteMarcada { 0%, 40% { background: var(--fundo); } 100% { background: transparent; } }
+
+.notas { display: flex; align-items: center; gap: 2px; margin: 0 -8px 0 auto; }
+.notas span { margin-right: 6px; font-size: 12px; }
+.notas button { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--suave); transition: background .2s, color .2s; }
+.notas button:hover { background: var(--fundo); color: var(--texto); }
+.notas button[aria-pressed="true"] { color: #fff; background: var(--preto); }
+.notas .i { width: 16px; height: 16px; }
+
+/* ------------------------------------------------ campo da pergunta */
+.chat__form { padding: 12px 20px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--linha); display: grid; gap: 8px; }
+.chat__campo { display: flex; align-items: flex-end; gap: 8px; padding: 5px 5px 5px 14px; border: 1px solid var(--linha-forte); border-radius: 24px; transition: border-color .2s, box-shadow .2s; }
+.chat__campo:hover { border-color: var(--apagado); }
+.chat__campo:focus-within { border-color: var(--texto); box-shadow: 0 0 0 3px rgb(0 0 0 / .07); }
+.chat__campo textarea { flex: 1; min-width: 0; height: 36px; padding: 7px 0; border: 0; background: none; resize: none; line-height: 22px; font-size: 15px; }
+.chat__campo textarea:focus { outline: none; }
+.chat__enviar { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--preto); color: #fff; transition: background .2s; }
+.chat__enviar:hover { background: #26262a; }
+.chat__enviar:disabled { background: var(--linha); color: var(--apagado); cursor: default; }
+.chat__enviar .i { width: 18px; height: 18px; }
+.chat__nota { display: flex; justify-content: space-between; font-size: 12px; color: var(--suave); }
+.chat__nota span { font-variant-numeric: tabular-nums; }
+.chat__contexto { display: flex; align-items: center; gap: 4px; justify-self: start; max-width: 100%; padding-left: 12px; border-radius: 99px; background: var(--fundo); font-size: 13px; }
+.chat__contexto span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat__contexto b { font-weight: 600; }
+.chat__contexto button { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%; color: var(--suave); transition: color .2s; }
+.chat__contexto button:hover { color: var(--texto); }
+.chat__contexto .i { width: 14px; height: 14px; }
+.chat__erro { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--vermelho); }
+.chat__erro--espera { color: var(--suave); }
+.chat__erro .i { width: 18px; height: 18px; margin-top: 1px; }
+.chat__erro span { flex: 1; }
+.chat__erro button { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+
+@media (max-width: 860px) { .chat__campo textarea { font-size: 16px; } }  /* abaixo de 16px o iPhone dá zoom ao focar */
+.leve .msg { animation: none; }

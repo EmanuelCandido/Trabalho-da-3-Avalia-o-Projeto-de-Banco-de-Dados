@@ -7,12 +7,15 @@ mas não sabe comparar números; por isso o preço é conferido depois, com o va
 import hashlib
 import re
 import time
+from statistics import mean, pstdev
 
 from bancos import mongo, redis_store, vetorial
 from ia import gemini
 
 LIMIAR = 0.6          # sobrescrito pelo RAG_LIMIAR do .env em init()
 TOP_K = 6
+LIMIAR_BUSCA = 0.62   # página /busca: o melhor produto precisa passar daqui ("tênis", que a loja não vende, dá 0,615)
+DESVIOS = 0.8         # página /busca: quanto o produto precisa se destacar da média dos candidatos
 
 _UNIDADES = {"dia", "dias", "cm", "centimetro", "centimetros", "centímetro", "centímetros", "kg", "quilo", "quilos",
              "vez", "vezes", "x", "hora", "horas", "h", "mes", "mês", "meses", "ano", "anos", "%", "peça", "peças",
@@ -138,14 +141,28 @@ def buscar(consulta, k=None, filtros=None, produto_id=None, fontes=None):
             "ms_embedding": ms_embedding, "ms_busca": ms_busca, "limiar": LIMIAR, "k": k}
 
 
+def _corte(similaridades, tem_filtro):
+    """Similaridade mínima de um produto na página /busca, ou None se nem o melhor deles parece com a busca.
+
+    Só o limiar fixo não basta: em frases como "roupa para a academia" quase todas as peças passam dele, porque
+    tudo na loja é roupa. Por isso fica só quem se destaca da média dos candidatos. Se a própria busca já
+    estreita ("masculino até R$ 200"), o limiar é suficiente.
+    """
+    if not similaridades or max(similaridades) < LIMIAR_BUSCA:
+        return None
+    if tem_filtro:
+        return LIMIAR
+    return max(LIMIAR, mean(similaridades) + DESVIOS * pstdev(similaridades))
+
+
 def ids_semelhantes(consulta, limite=24):
-    """Para a página /busca: ids de produtos por ordem de significado (produto ou avaliações dele)."""
-    r = buscar(consulta, k=20, fontes=["produto", "avaliacao"])
-    vistos, ids = set(), []
-    for t in r["aceitos"]:
-        if t["referencia"] not in vistos:
-            vistos.add(t["referencia"])
-            ids.append(t["referencia"])
+    """Para a página /busca: ids de produtos por ordem de significado, e o resultado completo da busca."""
+    r = buscar(consulta, k=20, fontes=["produto"])
+    corte = _corte([t["similaridade"] for t in r["trechos"]], bool(r["filtros"]))
+    if corte is None:
+        return [], r
+    ids = [t["referencia"] for t in r["trechos"]
+           if t["produto"] and t["similaridade"] >= corte and not _motivo_descarte(t["produto"], r["filtros"])]
     return ids[:limite], r
 
 
@@ -153,14 +170,14 @@ def parecidos(produto_id, qtd=4):
     """'Você também pode gostar': vizinhos do vetor do produto no pgvector (não chama a API).
     Sem vetores (IA desligada ou produto ainda não indexado), usa a mesma categoria."""
     try:
-        ids = [r["referencia"] for r in vetorial.parecidos(str(produto_id), qtd + 2)]
+        ids = [r["referencia"] for r in vetorial.parecidos(str(produto_id), qtd + 6)]
     except Exception:
         ids = []
-    itens = [p for p in mongo.por_ids(ids) if p["id"] != str(produto_id)][:qtd] if ids else []
+    itens = [p for p in mongo.por_ids(ids) if p["estoque"] > 0][:qtd] if ids else []
     if itens:
         return itens
     p = mongo.por_id(produto_id, completo=False)
     if not p:
         return []
-    lista, _ = mongo.listar(mongo.montar_filtro(categoria=p["categoria"]), "mais-vendidos", qtd + 1)
-    return [x for x in lista if x["id"] != p["id"]][:qtd]
+    lista, _ = mongo.listar(mongo.montar_filtro(categoria=p["categoria"]), "mais-vendidos", qtd + 6)
+    return [x for x in lista if x["id"] != p["id"] and x["estoque"] > 0][:qtd]

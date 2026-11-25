@@ -46,22 +46,31 @@ def perguntar():
         pode, espera = True, 0
     if not pode:
         minutos = max(1, round(espera / 60))
-        return jsonify(erro=f"Você fez muitas perguntas seguidas. Tente de novo em {minutos} min."), 429
+        return jsonify(erro=f"Você fez muitas perguntas seguidas. Tente de novo em {minutos} min.", espera=espera), 429
 
     produto_id = str(dados.get("produto_id") or "")[:40] or None
     try:
         r = rag.responder(pergunta, visitante=vid, produto_id=produto_id)
     except gemini.ErroIA as erro:
         log.warning("Embedding da pergunta falhou: %s", erro)
-        return jsonify(erro="Não consegui consultar a base agora. Tente de novo em instantes."), 503
+        return jsonify(erro="Não consegui consultar a base agora."), 503
     except psycopg.Error:
         current_app.logger.exception("Falha no banco vetorial")
-        return jsonify(erro="O banco de conhecimento não respondeu. Tente de novo em instantes."), 503
+        return jsonify(erro="O banco de conhecimento não respondeu."), 503
 
-    if r["sem_resposta"]:
-        r["whatsapp"] = link_whatsapp(config_loja()["whatsapp_numero"],
-                                      f"Olá! Perguntei ao assistente da NOMA e não encontrei a resposta: {pergunta}")
+    if _sem_fonte(r["sem_resposta"], r["resposta"], r["fontes"]):
+        r["whatsapp"] = _link_da_equipe(pergunta)
     return jsonify(r)
+
+
+def _sem_fonte(sem_resposta, resposta, fontes):
+    """Nada na base respondeu: ou nenhum trecho passou do limiar, ou o modelo leu os trechos e não citou nenhum."""
+    return sem_resposta or bool(resposta and not any(f.get("citada") for f in fontes or []))
+
+
+def _link_da_equipe(pergunta):
+    return link_whatsapp(config_loja()["whatsapp_numero"],
+                         f"Olá! Perguntei no site da NOMA e não encontrei a resposta: {pergunta}")
 
 
 @bp.get("/api/assistente/historico")
@@ -72,6 +81,17 @@ def historico():
             mensagens = redis_store.historico_chat(session["vid"])
         except RedisError:
             mensagens = []
+    # A conversa pode ter até 2 h: preço, estoque e foto dos cards são lidos de novo do MongoDB.
+    ids = list({p["id"] for m in mensagens for p in m.get("produtos") or []})
+    atuais = {p["id"]: rag.card(p) for p in mongo.por_ids(ids)} if ids else {}
+    pergunta = ""
+    for m in mensagens:
+        if m.get("papel") == "usuario":
+            pergunta = m.get("texto") or ""
+            continue
+        m["produtos"] = [atuais[p["id"]] for p in m.get("produtos") or [] if p["id"] in atuais]
+        if not m.get("aviso") and _sem_fonte(m.get("sem_resposta"), m.get("texto"), m.get("fontes")):
+            m["whatsapp"] = _link_da_equipe(pergunta)
     return jsonify(ativo=gemini.ativo(), mensagens=mensagens)
 
 

@@ -136,7 +136,7 @@ def _citacoes(texto, total):
 
 # ---------------------------------------------------------------- saída para a tela
 
-def _card(p):
+def card(p):
     return {"id": p["id"], "nome": p["nome"], "url": f"/produto/{p['slug']}", "preco": brl(p["preco_final"]),
             "preco_antes": brl(p["preco"]) if p["preco_final"] < p["preco"] else "",
             "imagem": miniatura(p["imagens"][0]) if p["imagens"] else "/static/img/sem-foto.svg",
@@ -202,7 +202,7 @@ def responder(pergunta, visitante=None, produto_id=None, tipo="chat", detalhes=F
         p = aceitos[n - 1].get("produto")
         if p and p["id"] not in vistos and len(cards) < MAX_CARDS:
             vistos.add(p["id"])
-            cards.append(_card(p))
+            cards.append(card(p))
     fontes = [_fonte(n, t, usados) for n, t in enumerate(aceitos, start=1)]
     tempos = {"reescrita": ms_reescrita, "embedding": r["ms_embedding"], "embedding_do_cache": r["vetor_do_cache"], "busca": r["ms_busca"],
               "geracao": geracao.get("ms"), "total": round((time.perf_counter() - inicio) * 1000)}
@@ -223,7 +223,7 @@ def responder(pergunta, visitante=None, produto_id=None, tipo="chat", detalhes=F
         try:
             redis_store.adicionar_ao_chat(
                 visitante, {"papel": "usuario", "texto": pergunta},
-                {"papel": "modelo", "texto": resposta or aviso, "produtos": cards, "id": interacao_id,
+                {"papel": "modelo", "texto": resposta or aviso, "aviso": bool(aviso), "produtos": cards, "id": interacao_id,
                  "sem_resposta": sem_resposta, "fontes": [{k: f[k] for k in ("n", "fonte", "titulo", "similaridade",
                                                                               "url", "citada")} for f in fontes]})
         except Exception:

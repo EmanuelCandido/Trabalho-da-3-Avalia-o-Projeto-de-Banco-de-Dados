@@ -87,7 +87,7 @@ def criar_app():
                     qtd = 0
         return {"csrf_token": csrf_token, "qtd_carrinho": qtd, "url_atual": url_atual,
                 "loja": config_loja() if not request.path.startswith("/static") else {},
-                "ano": datetime.now().year, "versao_estatico": "25", "ia_ativa": gemini.ativo()}
+                "ano": datetime.now().year, "versao_estatico": "26", "ia_ativa": gemini.ativo()}
 
     @app.after_request
     def cabecalhos(resposta):

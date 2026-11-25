@@ -21,11 +21,13 @@
       if (c.saveData || /(^|-)2g$|^3g$/.test(c.effectiveType || "") || (n.deviceMemory && n.deviceMemory <= 2) ||
           (n.hardwareConcurrency && n.hardwareConcurrency <= 2)) d.classList.add("leve");
       if (/^(slow-2g|2g)$/.test(c.effectiveType || "") || c.saveData) d.classList.add("dados");
+      {% if ia_ativa %}/* Chat acoplado (telas largas): continua aberto ao trocar de página, sem a página pular */
+      try { if (sessionStorage.getItem("noma:chat") && innerWidth >= 1280) d.classList.add("chat-aberto"); } catch (e) {}{% endif %}
     })();
   </script>
   {% block cabeca %}{% endblock %}
 </head>
-<body class="{% block classe_body %}{% endblock %}">
+<body class="{{ 'com-chat' if ia_ativa }} {% block classe_body %}{% endblock %}">
   {% include "_icones.html" %}
 
   {# Faixa do topo: tudo configurável no painel > Vitrine (salvo na tabela configuracoes do Supabase) #}
@@ -172,7 +174,7 @@
     <div class="busca__caixa">
       <form class="busca__form" action="{{ url_for('loja.busca') }}" role="search">
         {{ icone('busca') }}
-        <input type="search" name="q" placeholder="Buscar camisetas, linho, bolsa…" autocomplete="off" data-busca-input aria-label="Buscar produtos">
+        <input type="search" name="q" placeholder="{{ 'Buscar linho, bolsa, roupa para academia…' if ia_ativa else 'Buscar camisetas, linho, bolsa…' }}" autocomplete="off" data-busca-input aria-label="Buscar produtos">
         <button class="botao-icone botao-icone--suave" type="button" data-fechar-busca aria-label="Fechar busca">{{ icone('fechar') }}</button>
       </form>
       <div class="busca__resultados" data-busca-resultados>
@@ -180,6 +182,47 @@
       </div>
     </div>
   </div>
+
+  {% if ia_ativa %}
+  {# ------------------------------------------------ chat "Pergunte à NOMA" (JS e CSS só são baixados no primeiro uso) #}
+  <button class="perguntar" type="button" data-abrir-chat aria-haspopup="dialog" aria-label="Pergunte à NOMA">{{ icone('conversa') }}<span>Pergunte à NOMA</span></button>
+  <aside class="gaveta gaveta--chat" data-chat role="dialog" aria-labelledby="chat-titulo" aria-hidden="true" inert
+         data-css="{{ url_for('static', filename='css/assistente.css') }}?v={{ versao_estatico }}"
+         data-js="{{ url_for('static', filename='js/assistente.js') }}?v={{ versao_estatico }}">
+    <header class="gaveta__topo">
+      <h2 id="chat-titulo">Pergunte à NOMA</h2>
+      <div class="gaveta__acoes">
+        <button class="botao-icone" type="button" data-chat-limpar aria-label="Limpar conversa" title="Limpar conversa" hidden>{{ icone('lixeira') }}</button>
+        <button class="botao-icone botao-icone--suave" type="button" data-fechar-chat aria-label="Fechar">{{ icone('fechar') }}</button>
+      </div>
+    </header>
+    <div class="chat__corpo" data-chat-corpo tabindex="-1">
+      <div class="chat__abrindo" data-chat-abrindo aria-hidden="true">
+        <span class="esq esqueleto"></span><span class="esq esq--nome2 esqueleto"></span>
+        <span class="esq esqueleto"></span><span class="esq esq--nome2 esqueleto"></span>
+      </div>
+      <div class="vazio" data-chat-falhou hidden>
+        <h3>O chat não abriu</h3>
+        <p class="suave">Confira sua conexão.</p>
+        <button class="botao botao--contorno" type="button" data-chat-tentar>Tentar de novo</button>
+      </div>
+      <div class="chat__inicio" data-chat-inicio hidden></div>
+      <div class="chat__conversa" data-chat-conversa role="log" aria-live="polite" aria-label="Conversa"></div>
+    </div>
+    <form class="chat__form" data-chat-form novalidate hidden>
+      <div class="chat__erro" data-chat-erro role="alert" hidden></div>
+      <div class="chat__contexto" data-chat-contexto hidden>
+        <span>Sobre <b data-chat-contexto-nome></b></span>
+        <button type="button" data-chat-contexto-tirar aria-label="Perguntar sobre a loja toda" title="Perguntar sobre a loja toda">{{ icone('fechar') }}</button>
+      </div>
+      <div class="chat__campo">
+        <textarea data-chat-campo rows="1" maxlength="500" placeholder="Escreva sua pergunta" aria-label="Sua pergunta" aria-describedby="chat-nota"></textarea>
+        <button class="chat__enviar" type="submit" data-chat-enviar aria-label="Enviar pergunta" disabled>{{ icone('enviar') }}</button>
+      </div>
+      <p class="chat__nota" id="chat-nota"><span>Não informe dados pessoais.</span><span data-chat-contador hidden></span></p>
+    </form>
+  </aside>
+  {% endif %}
 
   <div class="toasts" data-toasts aria-live="polite"></div>
   {% with mensagens = get_flashed_messages(with_categories=true) %}

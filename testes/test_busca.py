@@ -61,3 +61,17 @@ def test_consulta_so_reescreve_pergunta_curta_numa_conversa(monkeypatch):
 def test_consulta_na_pagina_do_produto_leva_o_nome():
     produto = {"nome": "Vestido Midi de Linho"}
     assert rag._consulta("ela amassa?", [], produto) == "Vestido Midi de Linho: ela amassa?"
+
+
+def test_corte_da_pagina_de_busca():
+    # nada parecido o bastante (ex.: "tênis"): nenhum resultado
+    assert busca._corte([0.615, 0.614, 0.606, 0.59], tem_filtro=False) is None
+    assert busca._corte([], tem_filtro=False) is None
+    # uma peça se destaca: só ela passa do corte
+    peca_so = [0.694, 0.616, 0.613, 0.602, 0.602, 0.598, 0.595, 0.59]
+    corte = busca._corte(peca_so, tem_filtro=False)
+    assert [s for s in peca_so if s >= corte] == [0.694]
+    # o corte nunca fica abaixo do limiar
+    assert busca._corte([0.65, 0.40, 0.40, 0.40], tem_filtro=False) >= busca.LIMIAR
+    # a própria busca já estreita ("masculino até R$ 200"): vale só o limiar
+    assert busca._corte([0.663, 0.65, 0.633, 0.62], tem_filtro=True) == busca.LIMIAR
