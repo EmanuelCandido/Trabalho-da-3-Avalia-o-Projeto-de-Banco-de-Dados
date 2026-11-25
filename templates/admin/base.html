@@ -13,6 +13,7 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300..800&display=swap"></noscript>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}?v={{ versao_estatico }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ui.css') }}?v={{ versao_estatico }}">
+  {% block cabeca %}{% endblock %}
   <script>
     (function () {
       var n = navigator, c = n.connection || {};
@@ -34,6 +35,7 @@
         <a href="{{ url_for('admin.novo_produto') }}" class="{{ 'ativo' if rota == 'admin.novo_produto' }}">{{ icone('mais') }} Novo produto</a>
         <a href="{{ url_for('admin.pedidos') }}" class="{{ 'ativo' if rota == 'admin.pedidos' }}">{{ icone('pedido') }} Pedidos</a>
         <a href="{{ url_for('admin.vitrine') }}" class="{{ 'ativo' if rota in ('admin.vitrine', 'admin.novo_banner', 'admin.editar_banner') }}">{{ icone('imagem') }} Vitrine</a>
+        <a href="{{ url_for('admin_ia.inicio') }}" class="{{ 'ativo' if rota and rota.startswith('admin_ia.') }}">{{ icone('conversa') }} Assistente IA</a>
         <a href="{{ url_for('admin.configuracoes') }}" class="{{ 'ativo' if rota == 'admin.configuracoes' }}">{{ icone('ajustes') }} Configurações</a>
         <a href="{{ url_for('loja.inicio') }}" target="_blank" rel="noopener">{{ icone('loja') }} Ver loja {{ icone('externo', 'i--mini') }}</a>
       </nav>
@@ -42,6 +44,7 @@
         <span>{{ icone('supabase') }} Supabase · login e pedidos</span>
         <span>{{ icone('folha-mongo') }} MongoDB · produtos</span>
         <span>{{ icone('redis') }} Redis · cache e carrinho</span>
+        <span>{{ icone('banco') }} pgvector · vetores do assistente</span>
       </div>
     </aside>
 

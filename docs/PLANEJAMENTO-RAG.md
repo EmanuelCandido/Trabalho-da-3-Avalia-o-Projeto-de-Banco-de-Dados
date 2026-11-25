@@ -361,6 +361,8 @@ Na tela, `[n]` vira um marcador clicável que abre a fonte, e o texto do modelo 
 
 ### 8.2 Painel — "Assistente IA"
 
+Feito em 25/11 (`admin_ia.py`, `templates/admin/assistente.html`, `laboratorio.html`, `documentos.html`, `perguntas.html`, `static/js/admin-ia.js`). O laboratório também mostra o plano do Postgres (`EXPLAIN ANALYZE`), com e sem o índice HNSW.
+
 1. **Visão geral:** trechos indexados por fonte, modelo e dimensões, última indexação, perguntas hoje e nos últimos 7 dias, % sem resposta, 👍/👎, e status do pgvector, do Gemini e do n8n.
 2. **Reindexar tudo:** mostra o resultado (novos, iguais, removidos, tempo).
 3. **Laboratório de RAG** (a peça central do vídeo). Digita-se uma pergunta e a tela mostra cada etapa:

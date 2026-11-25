@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Assistente IA{% endblock %}
+{% block cabecalho %}Assistente IA{% endblock %}
+{% block cabeca %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-ia.css') }}?v={{ versao_estatico }}">{% endblock %}
+{% block conteudo %}
+{% include "admin/_abas_ia.html" %}
+
+{% if sem_tabelas %}
+<div class="vazio-grande">
+  <span>{{ icone('banco') }}</span>
+  <h2>As tabelas do assistente ainda não existem</h2>
+  <p class="suave">Rode <code>python scripts/setup_rag.py</code> (ou cole <code>database/rag.sql</code> no SQL Editor do Supabase) e depois <code>python scripts/indexar.py --tudo</code>.</p>
+</div>
+{% else %}
+<div data-visao>
+{% set total = indice.total %}
+{% set quem = {'script': 'script', 'painel': 'painel', 'n8n': 'n8n', 'automatica': 'ao salvar no painel'} %}
+{% if not gemini.configurado %}
+<p class="aviso aviso--info">{{ icone('alerta') }} Sem <code>GEMINI_API_KEY</code> no <code>.env</code>, o chat e a busca por significado ficam desligados na loja. Os vetores abaixo continuam no banco.</p>
+{% endif %}
+{% if outro_modelo %}
+<p class="aviso aviso--erro">{{ icone('alerta') }} Há vetores do modelo {{ outro_modelo|join(', ') }}, que não se comparam com os de {{ modelo_embedding }}. Reindexe para trocar todos.</p>
+{% endif %}
+
+<section class="numeros-adm">
+  <article class="kpi entrar" style="--i:0"><span>{{ icone('banco') }} Vetores no pgvector</span><strong>{{ total }}</strong>
+    <small>{{ indice.por_fonte.get('produto', 0) }} produtos · {{ indice.por_fonte.get('avaliacao', 0) }} de avaliações · {{ indice.por_fonte.get('documento', 0) }} de documentos</small></article>
+  <article class="kpi entrar" style="--i:1"><span>{{ icone('conversa') }} Perguntas em 7 dias</span><strong>{{ perguntas.total }}</strong>
+    <small>{{ perguntas.hoje }} hoje · {{ perguntas.chat }} no chat · {{ perguntas.busca }} na busca</small></article>
+  <article class="kpi entrar" style="--i:2"><span>{{ icone('busca') }} Sem resposta</span>
+    <strong>{{ ((perguntas.sem_resposta / perguntas.total * 100)|round|int ~ '%') if perguntas.total else '—' }}</strong>
+    <small>{{ perguntas.sem_resposta }} de {{ perguntas.total }} · <a class="link" href="{{ url_for('admin_ia.perguntas', filtro='sem-resposta') }}">ver quais</a></small></article>
+  <article class="kpi entrar" style="--i:3"><span>{{ icone('positivo') }} Avaliações do chat</span>
+    <strong>{{ perguntas.positivas }} <i class="kpi__sep">/</i> {{ perguntas.negativas }}</strong>
+    <small>úteis / não ajudaram</small></article>
+</section>
+
+<div class="duas-colunas duas-colunas--ia">
+  <section class="cartao entrar" style="--i:4">
+    <header class="cartao__cabeca cartao__cabeca--acoes">
+      <h2>Índice vetorial</h2>
+      {% set pendente = pendentes and (pendentes.mudou or pendentes.sobrando) %}
+      <button class="botao {{ 'botao--mini' if not pendente and total else '' }} {{ 'botao--contorno' if not pendente and total }}" type="button" data-reindexar {{ 'disabled' if not gemini.configurado }}>{{ icone('troca') }} Reindexar</button>
+    </header>
+    <p class="indice-estado {{ 'indice-estado--pendente' if pendente or not total }}" data-indice-estado role="status">
+      {% if not total %}Nenhum vetor ainda. Reindexe para criar os vetores do catálogo e dos documentos.
+      {% elif pendentes is none %}Não deu para comparar com o MongoDB agora.
+      {% elif pendente %}{% if pendentes.mudou %}{{ pendentes.mudou }} trecho{{ 's' if pendentes.mudou != 1 }} {{ 'mudaram' if pendentes.mudou != 1 else 'mudou' }}{% endif %}{% if pendentes.mudou and pendentes.sobrando %} e {% endif %}{% if pendentes.sobrando %}{{ pendentes.sobrando }} {{ 'sobraram' if pendentes.sobrando != 1 else 'sobrou' }} no índice{% endif %} desde a última indexação.
+      {% else %}Em dia com o MongoDB e os documentos.{% endif %}
+    </p>
+    <dl class="ficha">
+      <div><dt>Embedding</dt><dd>{{ modelo_embedding.split('@')[0] }} · {{ dimensoes }} números</dd></div>
+      <div><dt>Resposta</dt><dd>{{ modelo }}{% if perguntas.ms_medio %} · média de {{ '%.1f'|format(perguntas.ms_medio / 1000)|replace('.', ',') }} s{% endif %}</dd></div>
+      <div><dt>Busca</dt><dd>similaridade mínima {{ '%.2f'|format(limiar)|replace('.', ',') }} · até {{ top_k }} trechos</dd></div>
+      <div><dt>Espaço</dt><dd>tabela {{ banco.tabela }} · índice HNSW {{ banco.hnsw }} · pgvector {{ banco.pgvector }}</dd></div>
+      {% if indice.ultima %}<div><dt>Última vez</dt><dd>{{ indice.ultima.criado_em|data }} · {{ quem.get(indice.ultima.origem, indice.ultima.origem) }}</dd></div>{% endif %}
+    </dl>
+  </section>
+
+  <section class="cartao entrar" style="--i:5">
+    <header class="cartao__cabeca"><h2>Serviços</h2></header>
+    <ul class="servicos">
+      <li><span class="servicos__nome">{{ icone('conversa') }} Gemini</span>
+        {% if not gemini.configurado %}<span class="etiqueta">sem chave</span>
+        {% elif gemini.ok %}<span class="etiqueta etiqueta--ok">no ar · {{ gemini.ms }} ms</span>
+        {% else %}<span class="etiqueta etiqueta--erro" title="{{ gemini.erro }}">fora do ar</span>{% endif %}</li>
+      <li><span class="servicos__nome">{{ icone('troca') }} n8n</span>
+        {% if not n8n.configurado %}<span class="etiqueta">não configurado · o Python indexa</span>
+        {% elif n8n.ok %}<span class="etiqueta etiqueta--ok">no ar</span>
+        {% else %}<span class="etiqueta etiqueta--erro">fora do ar · o Python indexa</span>{% endif %}</li>
+    </ul>
+    <h3 class="cartao__titulo cartao__titulo--sub">Uso de hoje <small>teto diário no Redis</small></h3>
+    {% if uso %}
+    <ul class="cotas">
+      {% for nome, usado, limite in [('Respostas do chat', uso.chat, uso.limite_chat), ('Buscas por significado', uso.busca, uso.limite_busca)] %}
+      <li><span>{{ nome }}</span><b>{{ usado }} de {{ limite }}</b>
+        <span class="barrinha barrinha--cota {{ 'barrinha--cheia' if usado >= limite }}"><i style="--pct: {{ [usado / limite * 100, 100]|min if limite else 0 }}%"></i></span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="vazio-mini">— (o Redis não respondeu)</p>{% endif %}
+  </section>
+</div>
+
+<section class="cartao cartao--tabela entrar" style="--i:6">
+  <header class="cartao__cabeca cartao__cabeca--tabela"><h2>Últimas indexações</h2></header>
+  {% if indexacoes %}
+  <table class="tabela tabela--mini tabela--indexacoes">
+    <thead><tr><th>Quando</th><th>O quê</th><th>Quem</th><th class="direita">Novos</th><th class="direita">Iguais</th><th class="direita">Removidos</th><th class="direita">Tempo</th><th></th></tr></thead>
+    <tbody>
+      {% for i in indexacoes %}
+      <tr>
+        <td class="nowrap">{{ i.criado_em|data('%d/%m %H:%M') }}</td>
+        <td><span class="celula-corte" title="{{ i.nome }}">{{ i.nome }}</span></td>
+        <td>{{ quem.get(i.origem, i.origem) }}</td>
+        <td class="direita">{{ i.trechos_novos }}</td><td class="direita">{{ i.trechos_iguais }}</td><td class="direita">{{ i.trechos_removidos }}</td>
+        <td class="direita nowrap">{{ ('%.1f s'|format(i.ms / 1000))|replace('.', ',') if i.ms is not none else '—' }}</td>
+        <td class="direita">{% if i.status != 'ok' %}<span class="etiqueta etiqueta--erro" title="{{ i.erro }}">erro</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="vazio-mini">Nenhuma indexação registrada.</p>{% endif %}
+</section>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/admin-ia.js') }}?v={{ versao_estatico }}" defer></script>{% endblock %}

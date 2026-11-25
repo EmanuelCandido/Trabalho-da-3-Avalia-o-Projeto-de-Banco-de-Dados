@@ -81,6 +81,18 @@ def _post(caminho, corpo, timeout=30, tentativas=TENTATIVAS):
     raise ErroIA("Gemini não respondeu depois de várias tentativas.")
 
 
+def ping():
+    """Tempo (ms) para o Gemini responder os dados do modelo. Não gera texto: não gasta a cota de geração."""
+    inicio = time.perf_counter()
+    try:
+        r = requests.get(f"{BASE}/models/{_cfg['modelo']}", timeout=4, headers={"x-goog-api-key": _cfg["chave"]})
+    except requests.RequestException as erro:
+        raise ErroIA(f"Sem conexão com o Gemini: {erro.__class__.__name__}", status=0) from erro
+    if r.status_code != 200:
+        raise ErroIA(f"Gemini respondeu {r.status_code}", status=r.status_code)
+    return round((time.perf_counter() - inicio) * 1000)
+
+
 def normalizar(vetor):
     """Deixa o vetor com tamanho 1. O Gemini só normaliza o vetor de 3072 dimensões; com 768 a gente normaliza.
     A distância de cosseno não muda, mas o produto interno (<#>) passa a dar o mesmo resultado."""

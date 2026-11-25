@@ -131,7 +131,7 @@ code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-siz
 .conteudo { padding: 26px 28px 60px; max-width: 1280px; }
 
 /* ------------------------------------------------ dashboard */
-.bancos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+.bancos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px; }
 .banco { display: flex; align-items: center; gap: 14px; background: var(--superficie); border-radius: var(--raio-g); padding: 16px 18px; box-shadow: var(--sombra); }
 .banco h3 { font-size: 15px; }
 .banco p { font-size: 12px; color: var(--suave); }
@@ -140,6 +140,14 @@ code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-siz
 .banco--supabase .banco__icone { background: #1f9d6b; }
 .banco--mongo .banco__icone { background: #13863f; }
 .banco--redis .banco__icone { background: #d82c20; }
+.banco--pgvector .banco__icone { background: #336791; }
+.banco--gemini .banco__icone { background: #1a73e8; }
+a.banco { transition: box-shadow .2s; }
+a.banco:hover { box-shadow: var(--sombra), inset 0 0 0 1px var(--linha-forte); }
+.banco--neutro .banco__status { color: var(--suave); }
+/* com 5 bancos na fileira, o tempo de resposta fica embaixo do nome (não espreme o texto) */
+.bancos .banco { align-items: flex-start; padding: 16px; }
+.bancos .banco__status { margin: 6px 0 0; white-space: nowrap; }
 .banco__status { margin-left: auto; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; color: var(--verde); font-variant-numeric: tabular-nums; }
 .banco--off { opacity: .75; }
 .banco--off .banco__status { color: var(--vermelho); }

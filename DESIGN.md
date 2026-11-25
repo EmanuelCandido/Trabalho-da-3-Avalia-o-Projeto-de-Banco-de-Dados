@@ -50,6 +50,11 @@ Sistema visual em código, feito a partir do protótipo do Figma da dupla:
 - 2026-11-25 — No celular os avisos (`.toasts`) sobem para 84 px quando há botão do chat — senão um cobriria o outro.
 - 2026-11-25 — Ícones conversa, enviar, positivo e negativo entraram em `_icones.html` com a geometria do Lucide, no traço do conjunto.
 - 2026-11-25 — Importar o design system para o Figma: recusado; o código continua sendo a origem.
+- 2026-11-25 — Fase 4 (painel > Assistente IA) aprovada: visão geral, laboratório de RAG, documentos e perguntas, com abas no topo como em Pedidos. O painel é desenhado para computador e tablet.
+- 2026-11-25 — No laboratório, as 5 etapas são numeradas porque a ordem é real (pergunta, embedding, busca, prompt, resposta) — é a sequência que o vídeo explica.
+- 2026-11-25 — A linha do mínimo de similaridade é laranja (`--laranja`, cor de atenção do painel), não vermelha — vermelho fica para erro.
+- 2026-11-25 — Documentos da pasta `conhecimento/` só podem ser desativados no painel; o texto é editado no arquivo — senão a próxima indexação pelo script desfaria a edição.
+- 2026-11-25 — Dashboard com 5 bancos (pgvector e Gemini entraram); o tempo de resposta foi para baixo do nome — em 5 colunas ele espremia o texto.
 
 ## Perguntas em aberto
 - Quem é o cliente da NOMA (idade, perfil)? Hoje é suposição: adultos que compram básicos.

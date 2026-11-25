@@ -125,7 +125,7 @@
 
   /* funções usadas pela tela Vitrine (static/js/vitrine.js) */
   window.NomaAdmin = {
-    api, toast, brl,
+    api, toast, brl, esc, icone, abrir, fechar,
     confirmar(titulo, texto, botao, acao) {
       $("[data-conf-titulo]").textContent = titulo;
       $("[data-conf-texto]").textContent = texto;

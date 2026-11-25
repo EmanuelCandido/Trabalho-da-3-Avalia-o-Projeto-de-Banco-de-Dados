@@ -9,7 +9,7 @@ from time import perf_counter
 from flask import (Blueprint, flash, jsonify, redirect, render_template, request, session, url_for)
 from PIL import Image, UnidentifiedImageError
 
-from bancos import mongo, redis_store, supabase
+from bancos import mongo, redis_store, supabase, vetorial
 from ia import gemini, indexador
 from utils import (admin_obrigatorio, config_loja, ip_cliente, ler_data_hora, ler_preco,
                    mostrar_data_hora)
@@ -93,6 +93,11 @@ def _medir(func):
 @admin_obrigatorio
 def dashboard():
     status = {"mongo": _medir(mongo.ping), "supabase": _medir(supabase.ping), "redis": _medir(redis_store.ping)}
+    # banco vetorial e IA (fase do RAG): o pgvector mora no mesmo Supabase
+    vetores = {}
+    status["pgvector"] = _medir(lambda: vetores.update(total=vetorial.contar()))
+    status["pgvector"]["vetores"] = vetores.get("total")
+    status["gemini"] = _medir(gemini.ping) if gemini.ativo() else {"ok": False, "ms": None, "sem_chave": True}
     resumo = mongo.resumo() if status["mongo"]["ok"] else {}
     vendas, pedidos, acessos = {}, [], []
     if status["supabase"]["ok"]:

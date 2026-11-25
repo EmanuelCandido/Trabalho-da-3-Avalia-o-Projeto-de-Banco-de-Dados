@@ -75,3 +75,22 @@ def test_corte_da_pagina_de_busca():
     assert busca._corte([0.65, 0.40, 0.40, 0.40], tem_filtro=False) >= busca.LIMIAR
     # a própria busca já estreita ("masculino até R$ 200"): vale só o limiar
     assert busca._corte([0.663, 0.65, 0.633, 0.62], tem_filtro=True) == busca.LIMIAR
+
+
+def test_sobreposicao_dos_trechos():
+    from ia import textos
+    corpo = "\n\n".join(f"Parágrafo {i}: " + "texto de teste com várias palavras. " * 12 for i in range(5))
+    trechos = textos.marcar_sobreposicao("Doc", f"# Doc\n\n## Seção\n\n{corpo}\n\n## Outra\n\nFim do documento.")
+    assert trechos[0]["repetido"] == ""
+    assert all(t["repetido"] for t in trechos[1:] if t["secao"] == "Seção")
+    assert trechos[-1] == {**trechos[-1], "secao": "Outra", "repetido": ""}  # seção nova não repete a anterior
+    assert all(len(t["repetido"]) <= textos.SOBREPOSICAO for t in trechos)
+
+
+def test_arquivos_recusados():
+    import pytest
+    import admin_ia
+    for nome, conteudo in [("a.exe", b"abc"), ("a.txt", b""), ("a.pdf", b"nao e pdf"), ("a.txt", b"a\x00b")]:
+        with pytest.raises(admin_ia._ArquivoInvalido):
+            admin_ia._texto_do_arquivo(nome, conteudo)
+    assert admin_ia._texto_do_arquivo("a.txt", "Atenção".encode("cp1252")) == "Atenção"

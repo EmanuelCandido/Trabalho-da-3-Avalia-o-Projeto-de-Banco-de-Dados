@@ -254,11 +254,19 @@ def contar_pergunta(visitante, limite):
     return feitas <= limite, ttl
 
 
+def _chave_cota(tipo):
+    sufixo = "" if tipo == "chat" else f"{tipo}:"
+    return f"{P}ia:cota:{sufixo}{datetime.now(timezone.utc):%Y-%m-%d}"
+
+
+def cota_usada(tipo="chat"):
+    return int(_r.get(_chave_cota(tipo)) or 0)
+
+
 def usar_cota_do_dia(limite, tipo="chat"):
     """Conta um uso da IA no dia (teto global para não estourar o plano gratuito). O chat e a página de busca
     têm contadores separados: muita busca não deixa o chat sem resposta."""
-    sufixo = "" if tipo == "chat" else f"{tipo}:"
-    chave = f"{P}ia:cota:{sufixo}{datetime.now(timezone.utc):%Y-%m-%d}"
+    chave = _chave_cota(tipo)
     pipe = _r.pipeline()
     pipe.incr(chave)
     pipe.expire(chave, 60 * 60 * 48)

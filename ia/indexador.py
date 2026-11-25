@@ -67,6 +67,17 @@ def produtos_ativos():
     return [mongo.serializar(d, completo=True) for d in mongo.produtos().find({"ativo": True})]
 
 
+def pendencias():
+    """O que está diferente entre a origem (MongoDB e documentos) e o índice, sem chamar a API:
+    {'mudou': trechos novos ou alterados, 'sobrando': trechos de itens que não existem mais}."""
+    trechos = [t for p in produtos_ativos() for t in trechos_do_produto(p)]
+    trechos += [t for d in vetorial.listar_documentos(so_ativos=True) for t in trechos_do_documento(d)]
+    atuais = vetorial.hashes((*FONTES_PRODUTO, "documento"))
+    modelo, chaves = gemini.modelo_embedding(), {_chave(t) for t in trechos}
+    return {"mudou": sum(1 for t in trechos if atuais.get(_chave(t)) != (t["hash"], modelo)),
+            "sobrando": sum(1 for k in atuais if k not in chaves)}
+
+
 # ---------------------------------------------------------------- sincronização
 
 def _sincronizar(trechos, fontes, referencias, origem, escopo):

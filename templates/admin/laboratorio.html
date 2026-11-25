@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Laboratório de RAG{% endblock %}
+{% block cabecalho %}Assistente IA{% endblock %}
+{% block cabeca %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-ia.css') }}?v={{ versao_estatico }}">{% endblock %}
+{% block conteudo %}
+{% include "admin/_abas_ia.html" %}
+{% if not ativo %}
+<p class="aviso aviso--info">{{ icone('alerta') }} Preencha <code>GEMINI_API_KEY</code> no <code>.env</code> para usar o laboratório.</p>
+{% endif %}
+
+<form class="cartao lab-form" data-lab-form data-limiar="{{ limiar }}" data-k="{{ top_k }}" novalidate>
+  <label class="campo" for="lab-pergunta"><span>Pergunta</span></label>
+  <div class="lab-campo">
+    <textarea id="lab-pergunta" name="pergunta" rows="1" maxlength="{{ maximo }}" placeholder="Ex.: Qual o valor mínimo para ter frete grátis?" {{ 'disabled' if not ativo }} data-lab-campo>{{ pergunta }}</textarea>
+    <button class="botao" type="submit" {{ 'disabled' if not ativo }} data-lab-enviar>Perguntar</button>
+  </div>
+  <p class="campo__erro" data-lab-erro role="alert" hidden></p>
+  <div class="lab-exemplos">
+    {% for q in ['Qual o valor mínimo para ter frete grátis?', 'Quem ganhou a Copa do Mundo?', 'Presente masculino até R$ 200', 'O que acham do caimento da polo?'] %}
+    <button class="chip-sug" type="button" data-exemplo {{ 'disabled' if not ativo }}>{{ q }}</button>
+    {% endfor %}
+  </div>
+</form>
+
+<ol class="etapas" data-etapas hidden aria-live="polite" aria-busy="false">
+  <li class="etapa cartao" data-etapa="pergunta">
+    <header class="etapa__cabeca"><span class="etapa__n">1</span><h2>Pergunta</h2></header>
+    <div class="etapa__corpo" data-corpo></div>
+  </li>
+  <li class="etapa cartao" data-etapa="embedding">
+    <header class="etapa__cabeca"><span class="etapa__n">2</span><h2>Embedding</h2><small data-tempo></small></header>
+    <div class="etapa__corpo" data-corpo></div>
+  </li>
+  <li class="etapa cartao" data-etapa="busca">
+    <header class="etapa__cabeca"><span class="etapa__n">3</span><h2>Busca no pgvector</h2><small data-tempo></small></header>
+    <div class="etapa__corpo" data-corpo></div>
+  </li>
+  <li class="etapa cartao" data-etapa="prompt">
+    <header class="etapa__cabeca"><span class="etapa__n">4</span><h2>Prompt</h2><small data-tempo></small></header>
+    <div class="etapa__corpo" data-corpo></div>
+  </li>
+  <li class="etapa cartao" data-etapa="resposta">
+    <header class="etapa__cabeca"><span class="etapa__n">5</span><h2>Resposta</h2><small data-tempo></small></header>
+    <div class="etapa__corpo" data-corpo></div>
+  </li>
+</ol>
+
+<section class="lab-mais" data-lab-mais hidden>
+  <div class="lab-mais__botoes">
+    <button class="botao botao--contorno" type="button" data-extra="sem-rag">Responder sem RAG</button>
+    <button class="botao botao--contorno" type="button" data-extra="comparar">Comparar com a busca por texto</button>
+    <button class="botao botao--contorno" type="button" data-extra="plano">Ver plano do Postgres</button>
+  </div>
+  <div class="cartao lab-extra" data-painel="sem-rag" hidden></div>
+  <div class="cartao lab-extra" data-painel="comparar" hidden></div>
+  <div class="cartao lab-extra" data-painel="plano" hidden></div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/admin-ia.js') }}?v={{ versao_estatico }}" defer></script>{% endblock %}

@@ -1,0 +1,7 @@
+{# Abas das telas do Assistente IA (painel > Assistente IA) #}
+{% set rota = request.endpoint %}
+<nav class="abas-adm abas-ia" aria-label="Assistente IA">
+  {% for endpoint, rotulo in [('admin_ia.inicio', 'Visão geral'), ('admin_ia.laboratorio', 'Laboratório'), ('admin_ia.documentos', 'Documentos'), ('admin_ia.perguntas', 'Perguntas dos clientes')] %}
+  <a href="{{ url_for(endpoint) }}" class="{{ 'ativa' if rota == endpoint }}" {{ 'aria-current=page' if rota == endpoint }}>{{ rotulo }}</a>
+  {% endfor %}
+</nav>

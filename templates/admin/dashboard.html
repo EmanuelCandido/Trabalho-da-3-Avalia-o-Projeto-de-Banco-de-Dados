@@ -4,14 +4,16 @@
 {% block cabecalho %}Dashboard{% endblock %}
 {% block conteudo %}
 <section class="bancos">
-  {% set nomes = {'supabase': ('Supabase', 'PostgreSQL + Auth', 'supabase'), 'mongo': ('MongoDB', 'Produtos e imagens', 'folha-mongo'), 'redis': ('Redis', 'Cache, carrinho e vistos', 'redis')} %}
-  {% for chave in ['supabase', 'mongo', 'redis'] %}
+  {% set vetores = status.pgvector.vetores %}
+  {% set nomes = {'supabase': ('Supabase', 'PostgreSQL + Auth', 'supabase'), 'mongo': ('MongoDB', 'Produtos e imagens', 'folha-mongo'), 'redis': ('Redis', 'Cache e carrinho', 'redis'),
+                  'pgvector': ('pgvector', (vetores ~ ' vetores no Supabase') if vetores is not none else 'Vetores no Supabase', 'banco'), 'gemini': ('Gemini', 'Embeddings e respostas', 'conversa')} %}
+  {% for chave in ['supabase', 'mongo', 'redis', 'pgvector', 'gemini'] %}
   {% set s = status[chave] %}
-  <article class="banco banco--{{ chave }} {{ 'banco--off' if not s.ok }} entrar" style="--i: {{ loop.index0 }}">
+  <a class="banco banco--{{ chave }} {{ 'banco--off' if not s.ok }} {{ 'banco--neutro' if s.sem_chave }} entrar" style="--i: {{ loop.index0 }}" {% if chave in ('pgvector', 'gemini') %}href="{{ url_for('admin_ia.inicio') }}"{% endif %}>
     <span class="banco__icone">{{ icone(nomes[chave][2]) }}</span>
-    <div><h3>{{ nomes[chave][0] }}</h3><p>{{ nomes[chave][1] }}</p></div>
-    <span class="banco__status">{% if s.ok %}<i class="pulso"></i>{{ s.ms }} ms{% else %}fora do ar{% endif %}</span>
-  </article>
+    <div><h3>{{ nomes[chave][0] }}</h3><p>{{ nomes[chave][1] }}</p>
+      <span class="banco__status">{% if s.ok %}<i class="pulso"></i>{{ s.ms }} ms{% elif s.sem_chave %}sem chave{% else %}fora do ar{% endif %}</span></div>
+  </a>
   {% endfor %}
 </section>
 {% if modo == 'local' %}

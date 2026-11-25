@@ -11,6 +11,7 @@ from pymongo.errors import PyMongoError
 from redis.exceptions import RedisError
 
 import admin
+import admin_ia
 import assistente
 import loja
 from bancos import mongo, redis_store, supabase
@@ -43,6 +44,7 @@ def criar_app():
 
     app.register_blueprint(loja.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(admin_ia.bp)
     app.register_blueprint(assistente.bp)
     app.before_request(conferir_csrf)
 

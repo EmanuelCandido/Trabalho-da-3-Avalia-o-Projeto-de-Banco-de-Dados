@@ -155,6 +155,22 @@ def dividir_documento(titulo, texto, maximo=MAX_TRECHO, sobreposicao=SOBREPOSICA
     return trechos
 
 
+def marcar_sobreposicao(titulo, texto):
+    """Os trechos do documento com a parte repetida do trecho anterior separada (o painel mostra destacada)."""
+    saida, anterior = [], None
+    for t in dividir_documento(titulo, texto):
+        cabecalho, _, corpo = t["conteudo"].partition("\n")
+        repetido = ""
+        if anterior and anterior["secao"] == t["secao"]:
+            cauda = _cauda(anterior["corpo"], SOBREPOSICAO)
+            if corpo.startswith(f"{cauda}\n\n"):
+                repetido = cauda
+        saida.append({"secao": t["secao"], "cabecalho": cabecalho, "repetido": repetido,
+                      "texto": corpo[len(repetido):].strip(), "caracteres": len(t["conteudo"])})
+        anterior = {"secao": t["secao"], "corpo": corpo}
+    return saida
+
+
 def texto_de_pdf(conteudo):
     """Extrai o texto de um PDF (bytes)."""
     from io import BytesIO

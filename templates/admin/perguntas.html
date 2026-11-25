@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% from "_macros.html" import icone %}
+{% block titulo %}Perguntas dos clientes{% endblock %}
+{% block cabecalho %}Assistente IA{% endblock %}
+{% block cabeca %}<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-ia.css') }}?v={{ versao_estatico }}">{% endblock %}
+{% block conteudo %}
+{% include "admin/_abas_ia.html" %}
+
+<div class="topo-lista topo-lista--perguntas">
+  <nav class="abas-adm" aria-label="Filtro">
+    {% for k, rotulo in filtros.items() %}<a href="{{ url_for('admin_ia.perguntas', filtro=None if k == 'todas' else k, tipo=tipo) }}" class="{{ 'ativa' if filtro == k }}">{{ rotulo }}</a>{% endfor %}
+  </nav>
+  <nav class="abas-adm abas-adm--leve" aria-label="Onde">
+    {% for k, rotulo in [(None, 'Chat e busca'), ('chat', 'Só chat'), ('busca', 'Só busca')] %}<a href="{{ url_for('admin_ia.perguntas', filtro=None if filtro == 'todas' else filtro, tipo=k) }}" class="{{ 'ativa' if tipo == k }}">{{ rotulo }}</a>{% endfor %}
+  </nav>
+</div>
+
+{% if itens %}
+<div class="perguntas">
+  {% for p in itens %}
+  {% set usados = p.trechos|rejectattr('descartado')|list %}
+  <details class="pergunta cartao">
+    <summary>
+      <span class="pergunta__quando">{{ p.criado_em|data('%d/%m %H:%M') }}<small>{{ 'chat' if p.tipo == 'chat' else 'busca' }}</small></span>
+      <span class="pergunta__texto">{{ p.pergunta }}</span>
+      <span class="sim" title="Melhor similaridade · limiar {{ '%.2f'|format(limiar) }}">
+        {% set s = p.melhor_similaridade or 0 %}
+        <span class="sim__barra"><i style="--pct: {{ [[(s - 0.4) / 0.5 * 100, 0]|max, 100]|min }}%"></i><b style="--pct: {{ (limiar - 0.4) / 0.5 * 100 }}%"></b></span>
+        <span class="sim__valor">{{ '%.2f'|format(s)|replace('.', ',') if p.melhor_similaridade is not none else '—' }}</span>
+      </span>
+      <span>{% if p.sem_resposta %}<span class="etiqueta etiqueta--miss">sem resposta</span>{% elif p.tipo == 'chat' %}<span class="etiqueta etiqueta--ok">respondida</span>{% else %}<span class="etiqueta">{{ p.trechos|length }} resultado{{ 's' if p.trechos|length != 1 }}</span>{% endif %}</span>
+      <span class="pergunta__nota">{% if p.avaliacao == 1 %}<span title="Útil" aria-label="Útil">{{ icone('positivo') }}</span>{% elif p.avaliacao == -1 %}<span class="pergunta__nota--neg" title="Não ajudou" aria-label="Não ajudou">{{ icone('negativo') }}</span>{% endif %}</span>
+      <span class="pergunta__tempo">{% set ms = (p.ms_embedding or 0) + (p.ms_busca or 0) + (p.ms_geracao or 0) %}{{ ('%.1f s'|format(ms / 1000))|replace('.', ',') if ms else '—' }}</span>
+      {{ icone('baixo', 'pergunta__seta') }}
+    </summary>
+    <div class="pergunta__corpo">
+      {% if p.consulta and p.consulta != p.pergunta %}<p class="suave"><b>Texto buscado:</b> {{ p.consulta }}</p>{% endif %}
+      {% if p.resposta %}<div class="pergunta__resposta">{{ p.resposta }}</div>{% endif %}
+      {% if p.trechos %}
+      <ul class="pergunta__trechos">
+        {% for t in p.trechos[:8] %}<li class="{{ 'descartado' if t.descartado }}"><span>{{ '%.3f'|format(t.similaridade)|replace('.', ',') }}</span>{{ t.titulo }}{% if t.descartado %} <small>· {{ t.descartado }}</small>{% endif %}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <a class="link" href="{{ url_for('admin_ia.laboratorio', q=p.pergunta) }}">Testar no laboratório {{ icone('direita') }}</a>
+    </div>
+  </details>
+  {% endfor %}
+</div>
+{% if tem_mais or pagina > 1 %}
+<nav class="paginas">
+  {% if pagina > 1 %}<a class="botao botao--contorno botao--mini" href="{{ url_for('admin_ia.perguntas', filtro=None if filtro == 'todas' else filtro, tipo=tipo, pagina=pagina - 1) }}">Mais novas</a>{% endif %}
+  {% if tem_mais %}<a class="botao botao--contorno botao--mini" href="{{ url_for('admin_ia.perguntas', filtro=None if filtro == 'todas' else filtro, tipo=tipo, pagina=pagina + 1) }}">Mais antigas</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="vazio-grande">
+  <span>{{ icone('conversa') }}</span>
+  {% if filtro == 'todas' and not tipo %}
+  <h2>Nenhuma pergunta ainda</h2>
+  <p class="suave">As perguntas do chat e da busca da loja aparecem aqui.</p>
+  <a class="botao" href="{{ url_for('loja.inicio') }}" target="_blank" rel="noopener">{{ icone('loja') }} Abrir a loja</a>
+  {% else %}
+  <h2>Nenhuma pergunta com esse filtro</h2>
+  <a class="botao botao--contorno" href="{{ url_for('admin_ia.perguntas') }}">Ver todas</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

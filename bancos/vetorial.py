@@ -6,6 +6,8 @@
 
 Os vetores vão para o Postgres como texto '[0.12,-0.03,...]' convertido com ::vector.
 """
+import re
+
 from psycopg.types.json import Jsonb
 
 from bancos import supabase
@@ -94,6 +96,10 @@ def parecidos(referencia, qtd=4):
     return _q("select * from produtos_parecidos(%s, %s)", (referencia, qtd), todos=True)
 
 
+def contar():
+    return _q("select count(*) as n from conhecimento", um=True)["n"]
+
+
 def estatisticas():
     por_fonte = {r["fonte"]: r["qtd"] for r in
                  _q("select fonte, count(*) as qtd from conhecimento group by fonte", todos=True)}
@@ -130,6 +136,15 @@ def definir_trechos_documento(documento_id, quantidade):
     _q("update documentos set trechos = %s where id = %s::uuid", (quantidade, documento_id))
 
 
+def documento_da_origem(origem):
+    return _q("select id from documentos where origem = %s", (origem,), um=True)
+
+
+def editar_documento(documento_id, titulo, texto):
+    return _q("update documentos set titulo = %s, texto = %s, atualizado_em = now() where id = %s::uuid",
+              (titulo, texto, documento_id))
+
+
 def excluir_documento(documento_id):
     remover_referencias(["documento"], [str(documento_id)])
     return _q("delete from documentos where id = %s::uuid", (documento_id,))
@@ -139,6 +154,65 @@ def alternar_documento(documento_id):
     r = _q("update documentos set ativo = not ativo, atualizado_em = now() where id = %s::uuid returning ativo",
            (documento_id,), um=True)
     return r["ativo"] if r else None
+
+
+# ---------------------------------------------------------------- números do painel
+
+FUSO = "America/Sao_Paulo"
+
+
+def sobre_o_banco():
+    """Versão do pgvector e tamanho da tabela e do índice HNSW."""
+    return _q("""select (select extversion from pg_extension where extname = 'vector') as pgvector,
+                        pg_size_pretty(pg_table_size('public.conhecimento')) as tabela,
+                        pg_size_pretty(pg_relation_size('public.conhecimento_hnsw')) as hnsw""", um=True)
+
+
+def ultimas_indexacoes(limite=8):
+    return _q("select * from indexacoes order by criado_em desc limit %s", (limite,), todos=True)
+
+
+def numeros_das_perguntas(dias=7):
+    """Perguntas de clientes (chat e busca); as do laboratório ficam de fora."""
+    return _q(f"""select count(*) filter (where hoje) as hoje, count(*) as total,
+                         count(*) filter (where tipo = 'chat') as chat, count(*) filter (where tipo = 'busca') as busca,
+                         count(*) filter (where sem_resposta) as sem_resposta,
+                         count(*) filter (where avaliacao = 1) as positivas,
+                         count(*) filter (where avaliacao = -1) as negativas,
+                         round(avg(ms_embedding + ms_busca + ms_geracao) filter (where ms_geracao is not null))::int
+                             as ms_medio
+                    from (select *, criado_em at time zone '{FUSO}' >= date_trunc('day', now() at time zone '{FUSO}')
+                                 as hoje
+                            from interacoes_ia
+                           where tipo in ('chat', 'busca') and criado_em > now() - make_interval(days => %s)) i""",
+              (dias,), um=True)
+
+
+def listar_interacoes(filtro="todas", tipo=None, limite=50, pular=0):
+    condicao = {"sem-resposta": "and sem_resposta", "negativas": "and avaliacao = -1"}.get(filtro, "")
+    return _q(f"""select id, tipo, pergunta, consulta, trechos, melhor_similaridade, sem_resposta, resposta, modelo,
+                         tokens_entrada, tokens_saida, ms_embedding, ms_busca, ms_geracao, avaliacao, criado_em
+                    from interacoes_ia
+                   where tipo in ('chat', 'busca') and (%s::text is null or tipo = %s) {condicao}
+                   order by criado_em desc limit %s offset %s""", (tipo, tipo, limite, pular), todos=True)
+
+
+def plano(embedding, forcar_indice=False, qtd=6):
+    """EXPLAIN ANALYZE da busca por similaridade. SET LOCAL vale só dentro da transação: o pooler do Supabase
+    (modo transação) entrega a conexão para outra pessoa logo depois."""
+    with supabase.conexao() as conn:
+        with conn.transaction():
+            if forcar_indice:
+                conn.execute("set local enable_seqscan = off")
+                conn.execute("set local enable_sort = off")
+            linhas = conn.execute(
+                f"""explain (analyze, costs off, timing on, summary on)
+                    select id, 1 - (embedding operator(extensions.<=>) %s::{TIPO_VETOR}) as similaridade
+                      from conhecimento
+                     order by embedding operator(extensions.<=>) %s::{TIPO_VETOR} limit {int(qtd)}""",
+                (vetor_sql(embedding), vetor_sql(embedding))).fetchall()
+    # o vetor aparece inteiro no plano (768 números): corta para dar para ler
+    return [re.sub(r"'\[[^\]]{40,}\]'", "'[…768 números…]'", r["QUERY PLAN"]) for r in linhas]
 
 
 # ---------------------------------------------------------------- histórico
