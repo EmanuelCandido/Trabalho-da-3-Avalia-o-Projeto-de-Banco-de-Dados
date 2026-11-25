@@ -34,6 +34,20 @@ class Config:
     # sobrescreve este valor gravando na tabela "configuracoes" do Supabase.
     WHATSAPP_NUMERO = os.getenv("WHATSAPP_NUMERO", "5583999999999")
 
+    # IA (RAG): embeddings e respostas do Gemini; os vetores ficam no pgvector do Supabase.
+    # Sem GEMINI_API_KEY a loja funciona como antes (sem assistente e com a busca por texto).
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODELO = os.getenv("GEMINI_MODELO", "gemini-3.5-flash-lite")
+    GEMINI_MODELO_EMBEDDING = os.getenv("GEMINI_MODELO_EMBEDDING", "gemini-embedding-001")
+    EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "768"))
+    RAG_TOP_K = int(os.getenv("RAG_TOP_K", "6"))
+    RAG_LIMIAR = float(os.getenv("RAG_LIMIAR", "0.6"))  # calibrar com scripts/avaliar_rag.py
+    IA_LIMITE_DIA = int(os.getenv("IA_LIMITE_DIA", "400"))
+
+    # n8n (bônus): webhook que indexa o produto salvo no painel. Vazio = o próprio Python indexa.
+    N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "")
+    N8N_SEGREDO = os.getenv("N8N_SEGREDO", "")
+
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = _bool("SESSION_COOKIE_SECURE", False)

@@ -36,6 +36,11 @@ def configurado():
     return _pool is not None
 
 
+def conexao():
+    """Conexão do pool (usada por bancos/vetorial.py): `with supabase.conexao() as conn: ...`."""
+    return _pool.connection()
+
+
 def modo_auth():
     """'supabase' quando a URL e a chave anon do projeto estão no .env; senão o modo local de desenvolvimento."""
     return "supabase" if _url and _anon else "local"
