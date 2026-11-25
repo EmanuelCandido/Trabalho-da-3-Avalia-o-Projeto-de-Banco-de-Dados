@@ -106,6 +106,14 @@ def criar_app():
         # navegadores pedem /favicon.ico mesmo com o ícone SVG declarado na página
         return app.send_static_file("img/favicon.svg")
 
+    @app.get("/robots.txt")
+    def robots():
+        """Buscadores e robôs ficam fora da busca, dos filtros e das APIs: cada combinação de filtros é uma página
+        nova para eles, e cada página gasta comandos do Redis (o plano gratuito tem 500 mil por mês)."""
+        texto = ("User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /busca\nDisallow: /*?*\n"
+                 "Allow: /\n")
+        return app.response_class(texto, mimetype="text/plain", headers={"Cache-Control": "public, max-age=86400"})
+
     @app.get("/api/saude")
     def saude():
         """Chamada todo dia pelo cron da Vercel (vercel.json). Uma consulta simples ao Postgres conta como uso:

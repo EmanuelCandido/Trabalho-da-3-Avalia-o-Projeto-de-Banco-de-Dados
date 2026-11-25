@@ -1,6 +1,7 @@
 """Redis: vistos recentemente, carrinho, cache do catálogo, ranking de mais vistos e limite de login."""
 import hashlib
 import json
+import random
 from collections import deque
 from datetime import datetime, timezone
 from time import perf_counter
@@ -14,6 +15,10 @@ MAX_VISTOS = 12
 MAX_FALHAS_LOGIN = 5
 TTL_FALHAS = 60 * 15                # bloqueio de 15 minutos
 
+# O plano gratuito do Upstash tem 500 mil comandos por mês (todos contam, inclusive leituras).
+VERSAO_EM_MEMORIA = 15              # segundos que a versão do cache fica na memória do servidor
+AMOSTRA_STATS = 10                  # o acerto do cache é medido em 1 de cada 10 leituras (e conta 10)
+
 _r = None
 _ttl_cache = 300
 eventos = deque(maxlen=40)  # últimos comandos, mostrados no dashboard do admin
@@ -21,8 +26,9 @@ eventos = deque(maxlen=40)  # últimos comandos, mostrados no dashboard do admin
 
 def init(url, ttl_cache=300):
     global _r, _ttl_cache
-    _r = redis.Redis.from_url(url, decode_responses=True, socket_timeout=4, socket_connect_timeout=4,
-                              health_check_interval=30)
+    # Sem health_check_interval: ele manda um PING antes de cada comando depois de 30 s parado, e na Vercel
+    # quase toda requisição chega depois de uma pausa. Falha de conexão já vira RedisError pelo socket_timeout.
+    _r = redis.Redis.from_url(url, decode_responses=True, socket_timeout=4, socket_connect_timeout=4)
     _ttl_cache = ttl_cache
 
 
@@ -126,23 +132,29 @@ _versao_local = {"valor": None, "lida_em": 0.0}
 
 
 def _versao():
-    """Versão do cache. Guardada 2 s na memória do servidor para não gastar uma ida ao Redis por leitura."""
+    """Versão do cache. Fica alguns segundos na memória do servidor para não gastar uma ida ao Redis por leitura
+    (quem salva no painel já atualiza a versão local na hora; os outros servidores pegam em até 15 s)."""
     agora = perf_counter()
-    if _versao_local["valor"] is None or agora - _versao_local["lida_em"] > 2:
+    if _versao_local["valor"] is None or agora - _versao_local["lida_em"] > VERSAO_EM_MEMORIA:
         _versao_local.update(valor=_r.get(f"{P}cache:versao") or "0", lida_em=agora)
     return _versao_local["valor"]
 
 
 def lembrar(nome, carregar, ttl=None):
-    """Cache-aside: lê do Redis (HIT) ou executa a consulta no MongoDB e grava com TTL (MISS)."""
+    """Cache-aside: lê do Redis (HIT) ou executa a consulta no MongoDB e grava com TTL (MISS).
+    A taxa de acerto do dashboard é uma amostra: contar toda leitura dobrava os comandos gastos no Redis."""
+    contar = random.random() < 1 / AMOSTRA_STATS
     try:
         sufixo = hashlib.md5(nome.encode()).hexdigest()[:12] if len(nome) > 60 else nome
         chave = f"{P}cache:v{_versao()}:{sufixo}"
         inicio = perf_counter()
-        pipe = _r.pipeline(transaction=False)
-        pipe.get(chave)
-        pipe.hincrby(f"{P}stats", "consultas", 1)
-        guardado = pipe.execute()[0]
+        if contar:
+            pipe = _r.pipeline(transaction=False)
+            pipe.get(chave)
+            pipe.hincrby(f"{P}stats", "consultas", AMOSTRA_STATS)
+            guardado = pipe.execute()[0]
+        else:
+            guardado = _r.get(chave)
     except redis.RedisError:
         return carregar()  # sem Redis o site continua funcionando direto no MongoDB
     if guardado is not None:
@@ -153,7 +165,8 @@ def lembrar(nome, carregar, ttl=None):
         inicio = perf_counter()
         pipe = _r.pipeline(transaction=False)
         pipe.set(chave, json.dumps(valor, default=str), ex=ttl or _ttl_cache)
-        pipe.hincrby(f"{P}stats", "misses", 1)
+        if contar:
+            pipe.hincrby(f"{P}stats", "misses", AMOSTRA_STATS)
         pipe.execute()
         _log("SET", chave, "MISS", inicio)
     except redis.RedisError:
